@@ -68,22 +68,7 @@ body {
     z-index: 10;
 }
 
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.main-logo {
-    height: 60px;
-    width: auto;
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
-    transition: transform 0.3s ease;
-}
-
-.main-logo:hover {
-    transform: scale(1.05);
-}
+.brand { display: flex; align-items: center; gap: 20px; }
 
 .title {
     font-family: 'Jura', sans-serif; font-size: 2rem; font-weight: 700;
