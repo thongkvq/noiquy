@@ -50,18 +50,33 @@ const scheduleData = {
  * Logic Hiển thị & Cập nhật Lịch Trực
  */
 function updateScheduleDisplay(now) {
-    const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
+    const hour = now.getHours();
+    
+    // Logic "Ngày hiệu lực": Nếu trước 6h sáng thì vẫn tính là kỳ trực thuộc ngày hôm trước
+    const effectiveDate = new Date(now);
+    if (hour < 6) {
+        effectiveDate.setDate(now.getDate() - 1);
+    }
+    
+    const dateStr = `${effectiveDate.getDate()}/${effectiveDate.getMonth() + 1}/${effectiveDate.getFullYear()}`;
+    
+    // Tính toán ngày mai dựa trên ngày hiệu lực
+    const nextDate = new Date(effectiveDate);
+    nextDate.setDate(effectiveDate.getDate() + 1);
+    const tomorrowStr = `${nextDate.getDate()}/${nextDate.getMonth() + 1}/${nextDate.getFullYear()}`;
+
     const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
     
     const scheduleDateStr = document.getElementById('scheduleDateStr');
     if (!scheduleDateStr) return;
 
-    // Cập nhật thẻ hiển thị ngày của sidebar
-    const paddedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-    scheduleDateStr.innerText = `${days[now.getDay()]}, ${paddedDate}`;
+    // Cập nhật thẻ hiển thị ngày của sidebar theo ngày hiệu lực (giúp người trực đêm biết mình đang xem lịch của kỳ trực nào)
+    const paddedDate = `${String(effectiveDate.getDate()).padStart(2, '0')}/${String(effectiveDate.getMonth() + 1).padStart(2, '0')}/${effectiveDate.getFullYear()}`;
+    scheduleDateStr.innerText = `${days[effectiveDate.getDay()]}, ${paddedDate}`;
 
-    // Lấy dữ liệu phân ca
+    // Lấy dữ liệu phân ca dựa trên ngày hiệu lực
     const todaySchedule = scheduleData[dateStr] || { C1: ["(Trống)"], C2: ["(Trống)"] };
+    const tomorrowSchedule = scheduleData[tomorrowStr] || { C1: ["(Trống)"], C2: ["(Trống)"] };
 
     // Render danh sách người trực C1
     const listC1 = document.getElementById('list-c1');
@@ -75,13 +90,27 @@ function updateScheduleDisplay(now) {
         listC2.innerHTML = todaySchedule.C2.map(name => `<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--evn-orange)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> ${name}</li>`).join('');
     }
 
-    // Highlight Ca Đang Trực (C1: 06:00-18:00, C2: 18:00-06:00 hsau)
-    const hour = now.getHours();
+    // Render danh sách người trực C1 Ngày mai
+    const listT1 = document.getElementById('list-t1');
+    if (listT1) {
+        listT1.innerHTML = tomorrowSchedule.C1.map(name => `<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--evn-orange)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> ${name}</li>`).join('');
+    }
+
+    // Render danh sách người trực C2 Ngày mai
+    const listT2 = document.getElementById('list-t2');
+    if (listT2) {
+        listT2.innerHTML = tomorrowSchedule.C2.map(name => `<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--evn-orange)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg> ${name}</li>`).join('');
+    }
+
+    // Highlight Ca Đang Trực
     const cardC1 = document.getElementById('card-c1');
     const cardC2 = document.getElementById('card-c2');
 
     if (cardC1 && cardC2) {
-        if (hour >= 6 && hour < 18) {
+        // Nếu từ 6h sáng đến 18h tối -> Ca 1
+        // Nếu từ 18h tối đến 6h sáng hôm sau -> Ca 2
+        const currentHour = now.getHours();
+        if (currentHour >= 6 && currentHour < 18) {
             cardC1.classList.add('active');
             cardC2.classList.remove('active');
         } else {
@@ -119,4 +148,9 @@ function updateClock() {
 document.addEventListener('DOMContentLoaded', () => {
     setInterval(updateClock, 1000);
     updateClock();
+
+    // Tự động reload trang sau mỗi 30 phút để cập nhật lịch mới nếu qua ngày
+    setTimeout(() => {
+        location.reload();
+    }, 30 * 60 * 1000);
 });
