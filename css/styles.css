@@ -80,6 +80,45 @@ body {
 .clock { font-size: 2.8rem; font-weight: 700; color: var(--evn-orange); text-shadow: 0 0 20px rgba(243, 112, 33, 0.5); line-height: 1.1; }
 .date { font-size: 1.1rem; color: #b0d0ff; text-transform: uppercase; letter-spacing: 2px; }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.kiosk-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #8aa4c4;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    outline: none;
+}
+.kiosk-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--evn-orange);
+    border-color: rgba(243, 112, 33, 0.5);
+    transform: scale(1.05);
+}
+.kiosk-btn svg { width: 22px; height: 22px; }
+
+/* Ẩn con trỏ chuột khi kiosk mode active */
+body.kiosk-active {
+    cursor: none !important;
+}
+body.kiosk-active .kiosk-btn {
+    opacity: 0.1; /* Làm mờ nút đi để tránh phân tâm */
+}
+body.kiosk-active .kiosk-btn:hover {
+    opacity: 1;
+}
+
 /* Main Layout Wrapper */
 .main-wrapper {
     display: flex;
@@ -388,3 +427,23 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink-colon { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 .blink-c { animation: blink-colon 1s infinite; }
+
+/* Loading state khi đang fetch Sheets */
+.loading-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.6;
+    font-style: italic;
+    list-style: none;
+}
+.spinner {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    border-top-color: var(--evn-orange);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+

@@ -8,10 +8,15 @@
 - [x] Thêm tính năng tự động làm mới trang (Reload) sau mỗi 30 phút.
 - [x] Tối ưu footer: Bỏ chữ "Đang vận hành", thu gọn icon trạng thái.
 - [x] Đẩy mã nguồn lên GitHub repository: `thongkvq/noiquy`.
+- [x] Tích hợp lấy dữ liệu tự động từ Google Sheets cho:
+  - [x] Lịch trực (Sheet: `LichTruc`)
+  - [x] Dòng chữ chạy footer (Sheet: `CauHinh`, key: `ticker`)
+  - [x] 4 khung nội quy (Sheet: `NoiQuy`)
+- [x] Cơ chế Fallback và Loading state cho toàn bộ dashboard.
+- [x] Chuẩn hóa định dạng ngày tháng để khớp dữ liệu Sheets tự động.
 
 ## 🕒 Sắp tới / Gợi ý (Backlog)
 - [ ] Triển khai lên Vercel (`noiquy.vercel.app`).
-- [ ] Tích hợp lấy dữ liệu tự động từ Google Sheets (thay vì nội bộ trong `app.js`).
 - [ ] Thêm thông báo đẩy (Browser Notifications) khi đến giờ giao nhận ca.
-- [ ] Chế độ hiển thị toàn màn hình (Kiosk mode) tối ưu cho TV theo dõi.
+- [x] Chế độ hiển thị toàn màn hình (Kiosk mode) tối ưu cho TV theo dõi.
 - [ ] Thêm thông tin thời tiết hoặc tin tức nội bộ chạy ở thanh ticker dưới cùng.
