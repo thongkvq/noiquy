@@ -4,16 +4,27 @@
  * ============================================================
  *
  *  Hướng dẫn:
- *  1. Tạo Google Sheets với 2 sheet tên: LichTruc và CauHinh
+ *  1. Tạo Google Sheets với các sheet tên: LichTrucMoi, LichTruc, CauHinh, NoiQuy
  *  2. Chia sẻ "Anyone with the link can view"
  *  3. Copy phần SHEET_ID từ URL của Sheets:
  *     https://docs.google.com/spreadsheets/d/[SHEET_ID]/edit
  *  4. Dán vào biến SHEET_ID bên dưới
  *
- *  Cấu trúc sheet LichTruc (dòng đầu là header):
+ *  Cấu trúc sheet LichTrucMoi khuyến nghị (dòng đầu là header):
+ *  | Ngay      | ĐứcTM | GiangLT | LâmNN | QuangNM | LâmNHT | CôngĐT | Thông KVQ |
+ *  | 1/6/2026  |      | C1      |      |         | C2     |        | C2        |
+ *  | 2/6/2026  |      | C1      |      |         | C2     |        | C2        |
+ *  Quy ước:
+ *  - Cột Ngay là bắt buộc.
+ *  - Các cột còn lại là tên/mã nhân sự.
+ *  - Ô chứa C1 nghĩa là nhân sự đó trực Ca 1.
+ *  - Ô chứa C2 nghĩa là nhân sự đó trực Ca 2.
+ *  - Nếu một người trực nhiều ca trong cùng ngày, ngăn cách bằng dấu chấm phẩy: C1;C2
+ *  - Ô trống nghĩa là không trực.
+ *
+ *  Vẫn hỗ trợ cấu trúc cũ:
  *  | Ngay       | C1              | C2                                        |
  *  | 20/4/2026  | Tống Minh Đức   | Nguyễn Hoàng Tiến Lâm;Khương Vũ Quang Thông |
- *  Lưu ý: Nhiều người trong C1/C2 thì ngăn cách bằng dấu chấm phẩy " ; "
  *
  *  Cấu trúc sheet CauHinh (dòng đầu là header):
  *  | key     | value                                  |
@@ -26,7 +37,8 @@ const SHEETS_CONFIG = {
     SHEET_ID: '1CAH2EKk8BStCRtPVCH8ute_us9yi_7_UBdK0WHQN4_c',
 
     // Tên các sheet (phân biệt hoa thường - gõ đúng y như tên tab)
-    SHEET_LICH_TRUC: 'LichTruc',
+    // Web đang đọc LichTrucMoi; giữ LichTruc làm bản cũ dự phòng.
+    SHEET_LICH_TRUC: 'LichTrucMoi',
     SHEET_CAU_HINH: 'CauHinh',
     SHEET_NOI_QUY: 'NoiQuy',
 

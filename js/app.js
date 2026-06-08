@@ -124,22 +124,85 @@ function normalizeDate(str) {
 }
 
 
-// ============================================================
-//  BUILD SCHEDULE DATA từ CSV rows
-// ============================================================
-function buildScheduleData(rows) {
+function splitShiftMembers(value) {
+    return String(value || '')
+        .split(';')
+        .map(s => s.trim())
+        .filter(Boolean);
+}
+
+function normalizeShiftCode(value) {
+    return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
+}
+
+function isMatrixScheduleRow(row) {
+    return Object.keys(row).some(key => {
+        const normalizedKey = key.trim().toLowerCase();
+        if (!normalizedKey || normalizedKey === 'ngay' || normalizedKey === 'thu' || normalizedKey === 'thứ' || normalizedKey === 'c1' || normalizedKey === 'c2') return false;
+        return ['C1', 'C2'].includes(normalizeShiftCode(row[key]));
+    });
+}
+
+function buildLegacyScheduleData(rows) {
     const data = {};
     rows.forEach(row => {
-        const rawNgay = (row['Ngay'] || row['ngay'] || '').trim();
+        const rawNgay = (row['Ngày'] || row['Ngay'] || row['ngay'] || '').trim();
         const ngay = normalizeDate(rawNgay);
         const c1Raw = (row['C1'] || row['c1'] || '').trim();
         const c2Raw = (row['C2'] || row['c2'] || '').trim();
         if (!ngay) return;
         data[ngay] = {
-            C1: c1Raw ? c1Raw.split(';').map(s => s.trim()).filter(Boolean) : ['(Trống)'],
-            C2: c2Raw ? c2Raw.split(';').map(s => s.trim()).filter(Boolean) : ['(Trống)'],
+            C1: splitShiftMembers(c1Raw),
+            C2: splitShiftMembers(c2Raw),
         };
     });
+    return data;
+}
+
+function buildMatrixScheduleData(rows) {
+    const data = {};
+    rows.forEach(row => {
+        const rawNgay = (row['Ngày'] || row['Ngay'] || row['ngay'] || '').trim();
+        const ngay = normalizeDate(rawNgay);
+        if (!ngay) return;
+
+        const shifts = { C1: [], C2: [] };
+        Object.entries(row).forEach(([memberName, shiftValue]) => {
+            const normalizedName = memberName.trim();
+            const normalizedKey = normalizedName.toLowerCase();
+            if (!normalizedName || normalizedKey === 'ngay' || normalizedKey === 'ngày' || normalizedKey === 'thu' || normalizedKey === 'thứ') return;
+
+            splitShiftMembers(shiftValue).forEach(code => {
+                const normalizedCode = normalizeShiftCode(code);
+                if (normalizedCode === 'C1' || normalizedCode === 'C2') {
+                    shifts[normalizedCode].push(normalizedName);
+                }
+            });
+        });
+
+        data[ngay] = shifts;
+    });
+    return data;
+}
+
+// ============================================================
+//  BUILD SCHEDULE DATA từ CSV rows
+//  Hỗ trợ 2 kiểu sheet:
+//  1) Cũ: Ngay | C1 | C2
+//  2) Ma trận: Ngay | Tên nhân sự 1 | Tên nhân sự 2 | ...; ô chứa C1/C2
+// ============================================================
+function buildScheduleData(rows) {
+    const hasLegacyColumns = rows.some(row => 'C1' in row || 'c1' in row || 'C2' in row || 'c2' in row);
+    const hasMatrixRows = rows.some(isMatrixScheduleRow);
+    const data = hasMatrixRows && !hasLegacyColumns
+        ? buildMatrixScheduleData(rows)
+        : buildLegacyScheduleData(rows);
+
+    Object.values(data).forEach(day => {
+        day.C1 = day.C1.length ? day.C1 : ['(Trống)'];
+        day.C2 = day.C2.length ? day.C2 : ['(Trống)'];
+    });
+
     return data;
 }
 
@@ -269,54 +332,46 @@ async function loadFromSheets() {
         console.warn('[Sheets] Chưa cấu hình SHEET_ID trong js/config.js');
         setStatusNote('local');
         renderFallbackPanels();
-        updateScheduleDisplay(new Date());
+        updateScheduleDisplay(new Date(), true);
         return;
     }
 
     setLoadingState(true);
 
     try {
-        // Fetch song song cả 3 sheet
-        const [scheduleCSV, configCSV, noiQuyCSV] = await Promise.allSettled([
-            fetchCSV(SHEETS_CONFIG.URL_LICH_TRUC),
+        // Tải lịch trực trước để sidebar không bị kẹt "Đang tải" nếu sheet khác chậm/lỗi.
+        const scheduleCSV = await fetchCSV(SHEETS_CONFIG.URL_LICH_TRUC);
+        const rows = parseCSV(scheduleCSV);
+        if (rows.length > 0) {
+            scheduleData = buildScheduleData(rows);
+            console.log(`[Sheets] Đã tải ${Object.keys(scheduleData).length} ngày trực từ Sheets.`);
+        }
+        setStatusNote('live');
+        updateScheduleDisplay(new Date(), true);
+
+        // Tải các sheet phụ sau, lỗi sheet phụ không được chặn lịch trực.
+        Promise.allSettled([
             fetchCSV(SHEETS_CONFIG.URL_CAU_HINH),
             fetchCSV(SHEETS_CONFIG.URL_NOI_QUY),
-        ]);
-
-        // Xử lý LichTruc
-        if (scheduleCSV.status === 'fulfilled') {
-            const rows = parseCSV(scheduleCSV.value);
-            if (rows.length > 0) {
-                scheduleData = buildScheduleData(rows);
-                console.log(`[Sheets] Đã tải ${Object.keys(scheduleData).length} ngày trực từ Sheets.`);
+        ]).then(([configCSV, noiQuyCSV]) => {
+            if (configCSV.status === 'fulfilled') {
+                const configRows = parseCSV(configCSV.value);
+                const config = buildConfig(configRows);
+                applyConfig(config);
             }
-        } else {
-            console.error('[Sheets] Lỗi tải LichTruc:', scheduleCSV.reason);
-        }
 
-        // Xử lý CauHinh (tuỳ chọn)
-        if (configCSV.status === 'fulfilled') {
-            const rows = parseCSV(configCSV.value);
-            const config = buildConfig(rows);
-            applyConfig(config);
-        }
-
-        // Xử lý NoiQuy (hình thức panels nội quy)
-        if (noiQuyCSV.status === 'fulfilled') {
-            const rows = parseCSV(noiQuyCSV.value);
-            if (rows.length > 0) {
-                renderPanels(rows);
+            if (noiQuyCSV.status === 'fulfilled') {
+                const noiQuyRows = parseCSV(noiQuyCSV.value);
+                if (noiQuyRows.length > 0) {
+                    renderPanels(noiQuyRows);
+                } else {
+                    renderFallbackPanels();
+                }
             } else {
+                console.warn('[Sheets] Không tải được NoiQuy, dùng fallback.');
                 renderFallbackPanels();
             }
-        } else {
-            console.warn('[Sheets] Không tải được NoiQuy, dùng fallback.');
-            renderFallbackPanels();
-        }
-
-        // Status badge
-        const success = scheduleCSV.status === 'fulfilled';
-        setStatusNote(success ? 'live' : 'error');
+        });
 
     } catch (err) {
         console.error('[Sheets] Lỗi không xác định:', err);
@@ -324,7 +379,7 @@ async function loadFromSheets() {
         renderFallbackPanels();
     }
 
-    updateScheduleDisplay(new Date());
+    updateScheduleDisplay(new Date(), true);
 }
 
 // ============================================================
@@ -339,11 +394,18 @@ function memberHTML(name) {
     </li>`;
 }
 
+let lastRenderedScheduleKey = '';
+let lastRenderedMinute = '';
+
 // ============================================================
 //  HIỂN THỊ LỊCH TRỰC (logic giữ nguyên từ bản cũ)
 // ============================================================
-function updateScheduleDisplay(now) {
+function updateScheduleDisplay(now, forceRender = false) {
     const hour = now.getHours();
+    const minuteKey = `${hour}:${now.getMinutes()}`;
+
+    if (!forceRender && minuteKey === lastRenderedMinute) return;
+    lastRenderedMinute = minuteKey;
 
     // Logic "Ngày hiệu lực": trước 6h sáng thuộc kỳ trực ngày hôm trước
     const effectiveDate = new Date(now);
@@ -353,6 +415,10 @@ function updateScheduleDisplay(now) {
     const nextDate = new Date(effectiveDate);
     nextDate.setDate(effectiveDate.getDate() + 1);
     const tomorrowStr = `${nextDate.getDate()}/${nextDate.getMonth() + 1}/${nextDate.getFullYear()}`;
+
+    const scheduleKey = `${dateStr}|${tomorrowStr}|${hour >= 6 && hour < 18 ? 'C1' : 'C2'}`;
+    if (!forceRender && scheduleKey === lastRenderedScheduleKey) return;
+    lastRenderedScheduleKey = scheduleKey;
 
     const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 
@@ -373,7 +439,13 @@ function updateScheduleDisplay(now) {
     };
     Object.entries(listMap).forEach(([id, names]) => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = names.map(memberHTML).join('');
+        if (el) {
+            const html = names.map(memberHTML).join('');
+            if (el.dataset.html !== html) {
+                el.innerHTML = html;
+                el.dataset.html = html;
+            }
+        }
     });
 
     // Highlight ca đang trực
@@ -395,22 +467,20 @@ function updateScheduleDisplay(now) {
 // ============================================================
 function updateClock() {
     const now = new Date();
+    const timeText = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     const clockEl = document.getElementById('clock');
-    if (clockEl) {
-        clockEl.innerHTML = `${String(now.getHours()).padStart(2, '0')}<span class="blink-c">:</span>${String(now.getMinutes()).padStart(2, '0')}`;
+    if (clockEl && clockEl.textContent !== timeText) {
+        clockEl.textContent = timeText;
     }
 
     const dateEl = document.getElementById('date');
     if (dateEl) {
         const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-        dateEl.innerText = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        const dateText = `${days[now.getDay()]}, ${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+        if (dateEl.innerText !== dateText) dateEl.innerText = dateText;
     }
 
-    // Cập nhật lịch mỗi phút (giây = 0)
-    if (now.getSeconds() === 0 || !window.scheduleInitialized) {
-        updateScheduleDisplay(now);
-        window.scheduleInitialized = true;
-    }
+    updateScheduleDisplay(now);
 }
 
 // ============================================================
@@ -447,32 +517,37 @@ function initKioskMode() {
     });
 
     // Ẩn con trỏ chuột khi không có tương tác
-    let idleTimeout;
-    const idleTime = 3000; // 3 giây
-    
-    function resetIdleTimer() {
-        document.body.classList.remove('kiosk-active');
-        clearTimeout(idleTimeout);
-        idleTimeout = setTimeout(() => {
-            document.body.classList.add('kiosk-active');
-        }, idleTime);
+    if (!('ontouchstart' in window)) {
+        let idleTimeout;
+        const idleTime = 3000; // 3 giây
+        let lastIdleReset = 0;
+
+        function resetIdleTimer() {
+            const now = Date.now();
+            if (now - lastIdleReset < 500) return;
+            lastIdleReset = now;
+            document.body.classList.remove('kiosk-active');
+            clearTimeout(idleTimeout);
+            idleTimeout = setTimeout(() => {
+                document.body.classList.add('kiosk-active');
+            }, idleTime);
+        }
+
+        window.addEventListener('mousemove', resetIdleTimer, { passive: true });
+        window.addEventListener('mousedown', resetIdleTimer, { passive: true });
+        window.addEventListener('keypress', resetIdleTimer, { passive: true });
+
+        resetIdleTimer();
     }
-
-    window.addEventListener('mousemove', resetIdleTimer);
-    window.addEventListener('mousedown', resetIdleTimer);
-    window.addEventListener('keypress', resetIdleTimer);
-    window.addEventListener('touchstart', resetIdleTimer);
-
-    resetIdleTimer();
 }
 
 // ============================================================
 //  ENTRY POINT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
-    // Khởi động đồng hồ
-    setInterval(updateClock, 1000);
+    // Khởi động đồng hồ: chỉ cập nhật mỗi phút để giảm reflow trên TV yếu
     updateClock();
+    setInterval(updateClock, 60 * 1000);
 
     // Load dữ liệu từ Google Sheets
     loadFromSheets();
