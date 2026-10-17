@@ -52,6 +52,17 @@ const NAS_CONFIG = {
     ENABLED: true,
     URL_LICH_TRUC: 'https://database-dhcs.paroda.net/v2/public/lich-truc',
     TIMEOUT_MS: 8000,
+    // NAS lưu tên viết tắt; đổi sang tên đầy đủ như cột của sheet LichTrucMoi.
+    // Tên không có trong bảng thì giữ nguyên.
+    TEN_DAY_DU: {
+        'ĐứcTM': 'Tống Minh Đức',
+        'GiangLT': 'Lê Trường Giang',
+        'LâmNN': 'Nguyễn Ngọc Lâm',
+        'QuangNM': 'Nguyễn Minh Quang',
+        'LâmNHT': 'Nguyễn Hoàng Tiến Lâm',
+        'CôngĐT': 'Đỗ Thành Công',
+        'Thông KVQ': 'Khương Vũ Quang Thông',
+    },
 };
 const SHEETS_CONFIG = {
     // ⚠️ ĐÃY LÀ SHEET ID THỰC TỜ

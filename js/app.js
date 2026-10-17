@@ -377,7 +377,10 @@ async function loadFromSheets() {
     if (typeof NAS_CONFIG !== 'undefined' && NAS_CONFIG.ENABLED) {
         try {
             const rows = await fetchNASLichTruc();
-            const nasData = buildScheduleData(rows);
+            const tenDayDu = NAS_CONFIG.TEN_DAY_DU || {};
+            const nasData = buildScheduleData(rows.map(row => Object.fromEntries(
+                Object.entries(row).map(([key, value]) => [tenDayDu[key.normalize('NFC')] || key, value])
+            )));
             // NAS thiếu ngày trực hiện tại (trước 6h tính là hôm trước) → coi như lỗi để dùng Sheets.
             const effectiveDate = new Date();
             if (effectiveDate.getHours() < 6) effectiveDate.setDate(effectiveDate.getDate() - 1);
