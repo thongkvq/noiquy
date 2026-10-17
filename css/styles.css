@@ -1,12 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Jura:wght@500;700;800&display=swap');
-
 :root {
     --evn-blue: #001833;
     --evn-light-blue: #004b87;
     --evn-orange: #f37021;
     --evn-red: #e31837;
     --text-light: #e0f0ff;
-    --glass-bg: rgba(0, 30, 60, 0.4);
+    --glass-bg: rgba(0, 30, 60, 0.82);
     --glass-border: rgba(255, 255, 255, 0.15);
     --glass-highlight: rgba(255, 255, 255, 0.3);
 }
@@ -19,6 +17,18 @@
 
 body {
     background-color: #020813;
+    /* Nền tĩnh thay cho 3 div .blob (trước đây là 3 khối màu lớn bị blur 60px):
+       3 đốm màu cùng vị trí/độ mờ (xanh EVN góc trên trái, cam góc dưới phải, cyan giữa)
+       vẽ bằng radial-gradient. Không dùng blur/filter nên GPU yếu (TV box) không phải
+       composite lớp lớn mỗi frame. */
+    background-image:
+        radial-gradient(circle 380px at calc(40% + 200px) calc(40% + 200px),
+            rgba(0, 243, 255, 0.09) 0%, rgba(0, 243, 255, 0.045) 53%, rgba(0, 243, 255, 0) 100%),
+        radial-gradient(circle 430px at calc(100% - 200px) calc(100% - 200px),
+            rgba(243, 112, 33, 0.135) 0%, rgba(243, 112, 33, 0.067) 58%, rgba(243, 112, 33, 0) 100%),
+        radial-gradient(circle 480px at 200px 200px,
+            rgba(0, 75, 135, 0.45) 0%, rgba(0, 75, 135, 0.225) 62%, rgba(0, 75, 135, 0) 100%);
+    background-repeat: no-repeat;
     color: var(--text-light);
     font-family: 'Be Vietnam Pro', sans-serif;
     height: 100vh;
@@ -30,77 +40,13 @@ body {
     position: relative;
 }
 
-/* Animated Background Blobs for Glassmorphism effect */
-.bg-blobs {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    z-index: -1;
-}
-
-.blob {
-    position: absolute;
-    filter: blur(60px);
-    opacity: 0.45;
-}
-
-.blob-1 {
-    width: 600px;
-    height: 600px;
-    background: var(--evn-light-blue);
-    top: -100px;
-    left: -100px;
-    animation-delay: 0s;
-}
-
-.blob-2 {
-    width: 500px;
-    height: 500px;
-    background: rgba(243, 112, 33, 0.3);
-    bottom: -50px;
-    right: -50px;
-    animation-delay: -5s;
-}
-
-.blob-3 {
-    width: 400px;
-    height: 400px;
-    background: rgba(0, 243, 255, 0.2);
-    top: 40%;
-    left: 40%;
-    animation-delay: -10s;
-}
-
-@keyframes float {
-    0% {
-        transform: translate(0, 0) scale(1);
-    }
-
-    33% {
-        transform: translate(50px, -50px) scale(1.1);
-    }
-
-    66% {
-        transform: translate(-30px, 30px) scale(0.9);
-    }
-
-    100% {
-        transform: translate(0, 0) scale(1);
-    }
-}
-
 /* Header */
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: clamp(0.75rem, 1.45vh, 1rem) clamp(2rem, 2.6vw, 3rem);
-    background: rgba(0, 20, 40, 0.65);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(0, 20, 40, 0.85);
     border-bottom: 1px solid var(--glass-border);
     z-index: 10;
 }
@@ -367,14 +313,12 @@ body.kiosk-active .kiosk-btn:hover {
 /* Glassmorphism Panels */
 .glass-panel {
     background: var(--glass-bg);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
     border: 1px solid var(--glass-border);
     border-top: 1px solid var(--glass-highlight);
     border-left: 1px solid var(--glass-highlight);
     border-radius: 20px;
     padding: clamp(1.1rem, 1.35vh, 1.5rem) clamp(1.45rem, 1.7vw, 2rem);
-    box-shadow: 0 6px 18px 0 rgba(0, 0, 0, 0.32);
+    box-shadow: 0 3px 10px 0 rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
 }
@@ -465,9 +409,7 @@ body.kiosk-active .kiosk-btn:hover {
 
 /* Footer Ticker */
 .footer {
-    background: rgba(0, 15, 30, 0.82);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    background: rgba(0, 15, 30, 0.9);
     border-top: 1px solid var(--glass-border);
     padding: clamp(8px, 1vh, 12px) 0;
     display: flex;
@@ -478,32 +420,35 @@ body.kiosk-active .kiosk-btn:hover {
 
 @keyframes pulse-dot {
     0% {
-        box-shadow: 0 0 0 0 rgba(227, 24, 55, 0.7);
+        transform: scale(0.85);
+        opacity: 1;
     }
 
     70% {
-        box-shadow: 0 0 0 10px rgba(227, 24, 55, 0);
+        transform: scale(1.35);
+        opacity: 0;
     }
 
     100% {
-        box-shadow: 0 0 0 0 rgba(227, 24, 55, 0);
+        transform: scale(1.35);
+        opacity: 0;
     }
 }
 
 @keyframes pulse-badge {
     0% {
         transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(227, 24, 55, 0.7);
+        opacity: 1;
     }
 
     50% {
         transform: scale(1.05);
-        box-shadow: 0 0 0 8px rgba(227, 24, 55, 0);
+        opacity: 0.88;
     }
 
     100% {
         transform: scale(1);
-        box-shadow: 0 0 0 0 rgba(227, 24, 55, 0);
+        opacity: 1;
     }
 }
 
@@ -521,6 +466,7 @@ body.kiosk-active .kiosk-btn:hover {
     font-weight: 500;
     color: #b0d0ff;
     animation: scroll-left 55s linear infinite;
+    will-change: transform;
 }
 
 @keyframes scroll-left {
@@ -587,10 +533,8 @@ body.kiosk-active .kiosk-btn:hover {
     gap: 6px;
     padding: 3px 10px;
     border-radius: 999px;
-    background: rgba(0, 15, 30, 0.55);
+    background: rgba(0, 15, 30, 0.85);
     border: 1px solid var(--glass-border);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
     font-size: 11.5px;
     font-weight: 500;
     line-height: 1.5;
@@ -632,6 +576,18 @@ body.kiosk-active .kiosk-btn:hover {
 /* Đỏ: dữ liệu dự phòng cũ trong source */
 .source-badge.is-fallback {
     color: #ef4444;
+}
+
+/* Khi người dùng bật "giảm chuyển động" (reduced motion): tắt hiệu ứng nhấp nháy
+   của chấm trạng thái và nhãn ca trực. Marquee giữ nguyên (không gây nhấp nháy). */
+@media (prefers-reduced-motion: reduce) {
+
+    .blink-c,
+    [class*="pulse-"],
+    .source-badge .dot,
+    .shift-badge {
+        animation: none;
+    }
 }
 
 @media (min-width: 1600px) and (min-height: 900px) {
