@@ -1,25 +1,38 @@
 /**
  * ============================================================
- *  VÒNG XOAY MÀN HÌNH (4 tab tự chuyển)
+ *  VÒNG XOAY MÀN HÌNH (dải 4 tab, vòng xoay 3 màn)
  * ============================================================
  *  Màn 1 "Nội quy"  : DOM tĩnh (4 khung nội quy) — không vẽ lại.
  *  Màn 2/3/4        : vẽ vào 2 lớp luân phiên, cross-fade bằng opacity
  *                     (không blur, không box-shadow động).
  *
+ *  VÒNG XOAY TỰ ĐỘNG = 3 màn: Nội quy → Lịch công tác → Sự cố còn tồn.
+ *  Màn "Lịch trực tháng" có cờ `manual` trong Screens.SCREEN_DEFS nên
+ *  KHÔNG nằm trong vòng xoay: bấm chuột vào tab (hoặc phím ↓ / phím số)
+ *  mới mở, và mở ra thì TẠM DỪNG vòng xoay (ROTATION.MANUAL_HOLD_MS = 3 phút,
+ *  hết giờ không thao tác → tự về Nội quy và chạy lại vòng xoay).
+ *  Dữ liệu màn này vẫn tải ngầm như cũ nên bấm vào là có ngay.
+ *
  *  Chia trang: mỗi trang tối thiểu MIN_PAGE_MS, tối đa MAX_PAGE_MS;
  *  nhiều trang thì màn được kéo dài cho đủ; quá MAX_PAGES trang thì cắt
  *  bớt và ghi "+N mục".
  *
- *  Phím remote: ← / → chuyển màn, Enter = màn kế tiếp.
+ *  Phím remote: ← / → chuyển giữa 3 màn trong vòng xoay, Enter = màn kế tiếp,
+ *  ↓ (hoặc phím số 1..4) mở màn Lịch trực tháng như bấm chuột.
  * ============================================================
  */
 const Tabs = (function () {
     const screens = (typeof Screens !== 'undefined') ? Screens.SCREEN_DEFS : [];
+    // Vòng xoay tự động: bỏ các màn phải mở bằng tay (Lịch trực tháng)
+    const rot = screens.filter(function (s) { return !s.manual; });
 
-    let idx = 0;
+    let idx = 0;           // vị trí trong `screens` (dải tab)
+    let rotPos = 0;        // vị trí trong `rot` (vòng xoay tự động)
     let pageIdx = 0;
     let plan = null;
     let timer = null;
+    let holdTimer = null;
+    let manual = false;    // đang xem màn mở tay → vòng xoay tạm dừng
     let started = false;
 
     let staticEl = null;
@@ -36,7 +49,17 @@ const Tabs = (function () {
         return typeof v === 'number' ? v : 400;
     }
 
+    // Thời gian giữ màn mở tay trước khi tự về màn đầu vòng xoay
+    function manualHoldMs() {
+        const c = cfg();
+        if (typeof c.MANUAL_HOLD_MS === 'number') return c.MANUAL_HOLD_MS;
+        if (typeof c.manualHoldMs === 'number') return c.manualHoldMs;
+        return 180000;
+    }
+
     function hostEl() { return document.getElementById('screenHost'); }
+
+    function progressEl() { return document.querySelector('.tab-progress'); }
 
     // ------------------------------------------------------------
     //  Dải tab + thanh tiến trình
@@ -44,8 +67,11 @@ const Tabs = (function () {
     function buildTabStrip() {
         const list = document.getElementById('tabList');
         if (!list) return;
+        // Dải tab vẫn hiện ĐỦ 4 tab (kể cả màn mở tay)
         list.innerHTML = screens.map(function (s, i) {
-            return '<button type="button" class="tab" data-i="' + i + '">' + s.label + '</button>';
+            return '<button type="button" class="tab" data-i="' + i + '"'
+                + ' title="' + (s.manual ? 'Bấm để xem (tạm dừng vòng xoay)' : 'Bấm để chuyển màn') + '">'
+                + s.label + '</button>';
         }).join('');
         list.onclick = function (e) {
             const btn = e.target && e.target.closest ? e.target.closest('.tab') : null;
@@ -57,13 +83,34 @@ const Tabs = (function () {
     function updateStrip() {
         const tabs = document.querySelectorAll('#tabList .tab');
         for (let i = 0; i < tabs.length; i++) {
-            tabs[i].classList.toggle('is-active', i === idx);
+            const active = (i === idx);
+            tabs[i].classList.toggle('is-active', active);
+            tabs[i].classList.toggle('is-manual', active && manual);
+            // Dấu ⏸ trên tab đang được giữ bằng tay (vòng xoay đang tạm dừng)
+            const mark = tabs[i].querySelector('.tab-hold');
+            if (active && manual) {
+                if (!mark) {
+                    const sp = document.createElement('span');
+                    sp.className = 'tab-hold';
+                    sp.setAttribute('aria-label', 'tạm dừng');
+                    tabs[i].appendChild(sp);
+                }
+            } else if (mark) {
+                mark.parentNode.removeChild(mark);
+            }
         }
+
+        const bar = progressEl();
+        if (bar) bar.classList.toggle('is-hold', manual);
+
         const pg = document.getElementById('tabPage');
         if (!pg) return;
         const screen = screens[idx] || {};
         const total = (plan && plan.pages) ? plan.pages.length : 0;
-        if (screen.isStatic || total <= 0) {
+        if (manual) {
+            pg.hidden = false;
+            pg.textContent = 'ĐANG XEM · tự về Nội quy khi để yên';
+        } else if (screen.isStatic || total <= 0) {
             pg.hidden = true;
         } else {
             pg.hidden = false;
@@ -214,6 +261,10 @@ const Tabs = (function () {
         if (timer) { clearTimeout(timer); timer = null; }
     }
 
+    function stopHoldTimer() {
+        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+    }
+
     function startTimer(ms) {
         stopTimer();
         if (cfg().ENABLED === false) return;
@@ -230,13 +281,11 @@ const Tabs = (function () {
             startTimer(plan.pageMs);
             return;
         }
-        goScreen((idx + 1) % screens.length);
+        goRotation(rotPos + 1);                    // màn kế tiếp TRONG vòng xoay
     }
 
-    function goScreen(i) {
-        if (!screens.length) return;
-        idx = ((i % screens.length) + screens.length) % screens.length;
-        pageIdx = 0;
+    // Vẽ màn hiện tại rồi chạy nhịp tự chuyển
+    function showRotating() {
         const screen = screens[idx];
         plan = buildPlan(screen, new Date());
         present(true);
@@ -246,6 +295,68 @@ const Tabs = (function () {
             console.log('[Vòng xoay] ' + screen.label + ': ' + plan.pages.length + ' trang × '
                 + Math.round(plan.pageMs / 1000) + 's');
         }
+    }
+
+    // Vẽ màn mở tay: KHÔNG chạy nhịp, thanh tiến trình đứng yên/ẩn
+    function showManual() {
+        const screen = screens[idx];
+        plan = buildPlan(screen, new Date());
+        present(true);
+        stopTimer();
+        const bar = document.getElementById('tabProgress');
+        if (bar) {                                  // giữ nguyên vị trí, không chạy tiếp
+            bar.style.transition = 'none';
+            bar.style.transform = 'scaleX(0)';
+        }
+        updateStrip();
+    }
+
+    // Đang xem màn mở tay: reset bộ đếm "để yên" (bấm lại tab cũng gọi hàm này)
+    function startHold() {
+        stopHoldTimer();
+        if (cfg().ENABLED === false) return;
+        holdTimer = setTimeout(function () {
+            exitManual();
+            goRotation(0);                          // hết 3 phút → về Nội quy + chạy lại vòng xoay
+        }, manualHoldMs());
+    }
+
+    // Rời trạng thái màn mở tay (không tự vẽ màn nào)
+    function exitManual() {
+        stopHoldTimer();
+        if (!manual) return;
+        manual = false;
+        const bar = progressEl();
+        if (bar) bar.classList.remove('is-hold');
+        updateStrip();
+    }
+
+    // Chuyển tới vị trí `pos` TRONG VÒNG XOAY (bỏ qua màn mở tay)
+    function goRotation(pos) {
+        if (!rot.length) return;
+        rotPos = ((pos % rot.length) + rot.length) % rot.length;
+        manual = false;
+        stopHoldTimer();
+        idx = screens.indexOf(rot[rotPos]);
+        pageIdx = 0;
+        showRotating();
+    }
+
+    // Bấm tab (hoặc API ngoài): i = vị trí trong dải tab
+    function goScreen(i) {
+        if (!screens.length) return;
+        idx = ((i % screens.length) + screens.length) % screens.length;
+        pageIdx = 0;
+        const screen = screens[idx];
+        if (screen.manual) {                        // Lịch trực tháng: mở + TẠM DỪNG vòng xoay
+            manual = true;
+            showManual();
+            startHold();
+            return;
+        }
+        exitManual();
+        rotPos = Math.max(0, rot.indexOf(screen));  // vòng xoay tiếp tục TỪ màn này
+        showRotating();
     }
 
     // Khi dữ liệu nền vừa đổi: dựng lại kế hoạch nhưng KHÔNG reset nhịp đếm
@@ -273,13 +384,25 @@ const Tabs = (function () {
         if (!screens.length) return;
         const k = e.key;
         if (k === 'ArrowRight' || k === 'Enter') {
-            goScreen(idx + 1);
+            goRotation(rotPos + 1);                // đang mở tay → thoát + sang màn kế tiếp
         } else if (k === 'ArrowLeft') {
-            goScreen(idx - 1);
+            goRotation(manual ? rotPos : rotPos - 1);
+        } else if (k === 'ArrowDown') {
+            goManualScreen();                      // ↓ = mở Lịch trực tháng (như bấm chuột)
+        } else if (/^[1-9]$/.test(k)) {
+            const i = parseInt(k, 10) - 1;         // phím số: 1..4 = tab 1..4
+            if (i >= screens.length) return;
+            goScreen(i);
         } else {
             return;
         }
         e.preventDefault();
+    }
+
+    function goManualScreen() {
+        const s = screens.filter(function (x) { return x.manual; })[0];
+        if (!s) return;
+        goScreen(screens.indexOf(s));
     }
 
     // ------------------------------------------------------------
@@ -308,10 +431,13 @@ const Tabs = (function () {
 
     return {
         init: init,
-        goScreen: goScreen,
-        next: function () { goScreen(idx + 1); },
-        prev: function () { goScreen(idx - 1); },
+        goScreen: goScreen,                            // theo dải tab (màn mở tay = tạm dừng)
+        next: function () { goRotation(rotPos + 1); },
+        prev: function () { goRotation(rotPos - 1); },
         restart: function () { goScreen(idx); },
+        openManual: goManualScreen,                    // mở màn "Lịch trực tháng"
+        isManual: function () { return manual; },
+        manualMs: manualHoldMs,
         onDataChanged: onDataChanged,
         // Đổi thời lượng 1 màn lúc đang chạy (dùng cho cấu hình/kiểm tra)
         setDuration: function (id, ms) {
@@ -320,5 +446,6 @@ const Tabs = (function () {
         },
         current: function () { return screens[idx] ? screens[idx].id : ''; },
         _screens: screens,
+        _rot: rot,
     };
 })();

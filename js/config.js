@@ -128,6 +128,11 @@ const WEATHER_CONFIG = {
 //  Màn 1 "Nội quy" = màn cũ (4 khung nội quy + sidebar ca trực).
 //  Màn 2-4 chiếm đúng vùng của 4 khung nội quy; header/footer/sidebar giữ nguyên.
 //
+//  VÒNG XOAY TỰ ĐỘNG chỉ có 3 màn (theo thứ tự):
+//    Nội quy (60s) → Lịch công tác (30s) → Sự cố còn tồn (30s) → lặp lại.
+//  Màn "Lịch trực tháng" KHÔNG tự hiện: chỉ mở khi bấm chuột vào tab (hoặc
+//  phím ↓ / phím số) — xem MANUAL_HOLD_MS.
+//
 //  Chia trang: mỗi trang tối thiểu MIN_PAGE_MS, tối đa MAX_PAGE_MS;
 //  nếu chia nhiều trang thì thời lượng màn được kéo dài cho đủ
 //  (tối đa MAX_PAGES trang, phần dư cắt bớt và ghi "+N mục").
@@ -137,9 +142,13 @@ const ROTATION = {
     FADE_MS: 400,          // chuyển màn bằng opacity
     NOI_QUY_MS: 60000,     // 60s
     CONG_TAC_MS: 30000,    // 30s
-    LICH_TRUC_MS: 20000,   // 20s
+    LICH_TRUC_MS: 20000,   // 20s — chỉ dùng khi mở tay màn Lịch trực tháng
     SU_CO_MS: 30000,       // 30s
     MIN_PAGE_MS: 10000,    // 10s/trang
     MAX_PAGE_MS: 30000,    // 30s/trang
     MAX_PAGES: 3,          // tối đa 3 trang/màn
+    // Mở màn "Lịch trực tháng" bằng tay → TẠM DỪNG vòng xoay.
+    // Không thao tác gì trong 3 phút thì tự quay về Nội quy và chạy lại vòng xoay.
+    MANUAL_HOLD_MS: 180000, // 3 phút
+    manualHoldMs: 180000,   // tên thay thế (giữ để tương thích tài liệu)
 };

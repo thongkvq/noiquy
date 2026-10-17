@@ -649,14 +649,47 @@ body.kiosk-active .kiosk-btn:hover {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 999px;
     padding: 5px 16px;
-    cursor: pointer;
+    cursor: pointer;                     /* mọi tab bấm được bằng chuột */
     transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.tab:hover,
+.tab:focus-visible {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.tab:active {
+    background: rgba(255, 255, 255, 0.16);
 }
 
 .tab.is-active {
     color: #ffffff;
     background: rgba(243, 112, 33, 0.18);
     border-color: rgba(243, 112, 33, 0.65);
+}
+
+/* Tab đang xem bằng tay (Lịch trực tháng): vòng xoay tạm dừng */
+.tab.is-manual {
+    border-color: rgba(243, 112, 33, 0.9);
+    background: rgba(243, 112, 33, 0.28);
+}
+
+.tab-hold {
+    /* Dấu tạm dừng vẽ bằng 2 vạch (font của TV box không có ký tự ⏸) */
+    display: inline-block;
+    width: 8px;
+    height: 0.8em;
+    margin-left: 8px;
+    vertical-align: -0.05em;
+    border-left: 3px solid var(--evn-orange);
+    border-right: 3px solid var(--evn-orange);
+}
+
+/* Vòng xoay đang tạm dừng → thanh tiến trình đứng yên (ẩn) */
+.tab-progress.is-hold {
+    opacity: 0;
 }
 
 .tab-page {
@@ -888,6 +921,9 @@ body.kiosk-active .kiosk-btn:hover {
 
 /* ============================================================
    MÀN 4 — SỰ CỐ CÒN TỒN
+   Chữ trong khung nội dung = cỡ cũ + 2px (0.125rem); thẻ cao thêm
+   tương ứng (98px → 116px) để không cắt chữ. screens.js rowHeight = 118
+   (116 + 2px margin) để tabs.js tính lại số thẻ mỗi trang.
    ============================================================ */
 .sc-sum {
     flex-shrink: 0;
@@ -900,7 +936,7 @@ body.kiosk-active .kiosk-btn:hover {
 
 .sc-total {
     font-family: 'Jura', sans-serif;
-    font-size: 1.15rem;
+    font-size: 1.275rem;
     font-weight: 700;
     letter-spacing: 1px;
     color: #ffffff;
@@ -909,18 +945,18 @@ body.kiosk-active .kiosk-btn:hover {
 
 .sc-total b {
     color: var(--evn-orange);
-    font-size: 1.5rem;
+    font-size: 1.625rem;
     margin-left: 4px;
 }
 
 .sc-upd {
     margin-left: auto;
-    font-size: 0.85rem;
+    font-size: 0.975rem;
     color: #8aa4c4;
 }
 
 .sc-chip {
-    font-size: 0.85rem;
+    font-size: 0.975rem;
     font-weight: 600;
     padding: 3px 10px;
     border-radius: 999px;
@@ -928,7 +964,7 @@ body.kiosk-active .kiosk-btn:hover {
 }
 
 .sc-card {
-    height: 98px;
+    height: 116px;
     overflow: hidden;
     padding: 8px 12px;
     margin-bottom: 2px;
@@ -963,7 +999,7 @@ body.kiosk-active .kiosk-btn:hover {
 .sc-badge {
     flex-shrink: 0;
     font-family: 'Jura', sans-serif;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 700;
     letter-spacing: 1px;
     padding: 2px 9px;
@@ -1012,7 +1048,7 @@ body.kiosk-active .kiosk-btn:hover {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 1.1rem;
+    font-size: 1.225rem;
     font-weight: 600;
     color: #ffffff;
 }
@@ -1020,7 +1056,7 @@ body.kiosk-active .kiosk-btn:hover {
 .sc-svc {
     flex-shrink: 0;
     font-family: 'Jura', sans-serif;
-    font-size: 0.78rem;
+    font-size: 0.905rem;
     font-weight: 700;
     letter-spacing: 1px;
     padding: 2px 8px;
@@ -1030,7 +1066,7 @@ body.kiosk-active .kiosk-btn:hover {
 }
 
 .sc-line {
-    font-size: 0.95rem;
+    font-size: 1.075rem;
     line-height: 1.35;
     color: var(--text-light);
     overflow: hidden;
@@ -1044,7 +1080,7 @@ body.kiosk-active .kiosk-btn:hover {
 
 .sc-k {
     font-family: 'Jura', sans-serif;
-    font-size: 0.8rem;
+    font-size: 0.925rem;
     font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
@@ -1065,27 +1101,29 @@ body.kiosk-active .kiosk-btn:hover {
    ============================================================ */
 .cal-head-bar {
     flex-shrink: 0;
-    height: 40px;
+    height: 42px;
     display: flex;
     align-items: center;
     gap: 14px;
     font-family: 'Jura', sans-serif;
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: 1.6rem;
+    /* 25.6px — tiêu đề màn đọc được từ xa */
+    font-weight: 800;
     letter-spacing: 2px;
     color: #ffffff;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .cal-note {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     font-weight: 500;
     letter-spacing: 0.5px;
     color: #8aa4c4;
 }
 
 /* Bảng ma trận: hàng = nhân sự, cột = ngày trong tháng.
-   Số cột/hàng do JS đặt qua style inline (grid-template-columns/rows). */
+   Số cột/hàng do JS đặt qua style inline (grid-template-columns/rows).
+   Cột tên = max-content nên tên dài nhất không bị cắt. */
 .tm-grid {
     flex: 1;
     min-height: 0;
@@ -1097,9 +1135,9 @@ body.kiosk-active .kiosk-btn:hover {
 .tm-corner {
     display: flex;
     align-items: center;
-    padding-left: 10px;
+    padding-left: 6px;
     font-family: 'Jura', sans-serif;
-    font-size: 0.92rem;
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: 1px;
     text-transform: uppercase;
@@ -1114,13 +1152,13 @@ body.kiosk-active .kiosk-btn:hover {
     min-width: 0;
     overflow: hidden;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .tm-dow {
     font-family: 'Jura', sans-serif;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
+    /* 15.2px */
     font-weight: 700;
     letter-spacing: 0.5px;
     line-height: 1.1;
@@ -1129,123 +1167,185 @@ body.kiosk-active .kiosk-btn:hover {
 
 .tm-day {
     font-family: 'Jura', sans-serif;
-    font-size: 1.05rem;
+    font-size: 1.4rem;
+    /* 22.4px */
     font-weight: 700;
     line-height: 1.1;
     color: #ffffff;
 }
 
+/* T7 / CN: nổi bật hơn hẳn ngày thường */
 .tm-hd.is-weekend {
-    background: rgba(120, 170, 235, 0.16);
+    background: rgba(120, 170, 235, 0.24);
+}
+
+.tm-hd.is-weekend .tm-dow {
+    color: #a8ccff;
+}
+
+.tm-hd.is-weekend .tm-day {
+    color: #ffd166;
 }
 
 .tm-cell {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
     min-width: 0;
     overflow: hidden;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.035);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(5, 17, 31, 0.85);
 }
 
 .tm-cell.is-weekend {
-    background: rgba(120, 170, 235, 0.1);
+    background: rgba(38, 78, 138, 0.4);
+}
+
+/* Khối ca trực — tô kín ô, không còn chip nhỏ */
+.tm-sh {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Jura', sans-serif;
+    font-size: 1.5rem;
+    /* 24px */
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0;
+    white-space: nowrap;
+}
+
+.tm-sh.c1 {
+    background: #f2a93b;
+    color: #241300;
+}
+
+.tm-sh.c2 {
+    background: #1a67d8;
+    color: #ffffff;
+}
+
+/* Ô có cả 2 ca: chia đôi trên/dưới, chữ nhỏ hơn nhưng vẫn >= 18px */
+.tm-cell.is-both .tm-sh {
+    font-size: 1.125rem;
+    /* 18px */
+}
+
+.tm-cell.is-both .tm-sh.c1 {
+    border-bottom: 2px solid rgba(4, 14, 26, 0.9);
 }
 
 .tm-name {
     display: flex;
     align-items: center;
-    padding-left: 10px;
+    padding: 0 14px 0 12px;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    font-size: 1.05rem;
-    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
+    font-size: 1.4rem;
+    /* 22.4px */
+    font-weight: 700;
     color: #e8f2ff;
     white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Ngày đã qua: giảm độ sáng cả cột */
+/* Ngày đã qua: mờ cả cột */
 .tm-hd.is-past,
 .tm-cell.is-past {
-    opacity: 0.45;
+    opacity: 0.4;
 }
 
-/* Cột hôm nay: nền + viền cam cho cả cột, kể cả tiêu đề */
+/* Cột hôm nay: tiêu đề nền cam chữ tối */
 .tm-hd.is-today {
-    background: rgba(243, 112, 33, 0.28);
-    border-color: var(--evn-orange);
+    background: var(--evn-orange);
 }
 
 .tm-hd.is-today .tm-dow,
 .tm-hd.is-today .tm-day {
-    color: #ffd9bd;
+    color: #2a1200;
 }
 
-.tm-cell.is-today {
-    background: rgba(243, 112, 33, 0.16);
-    border-left-color: var(--evn-orange);
-    border-right-color: var(--evn-orange);
-}
-
-/* Chip ca trực — chữ 1rem = 16px, đọc rõ từ xa */
-.tm-chip {
-    display: inline-block;
-    font-family: 'Jura', sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    line-height: 1.2;
-    letter-spacing: 0.5px;
-    padding: 1px 5px;
-    border-radius: 6px;
-    white-space: nowrap;
-}
-
-.tm-chip.c1 {
-    background: rgba(250, 190, 90, 0.92);
-    color: #3a2205;
-}
-
-.tm-chip.c2 {
-    background: rgba(60, 145, 240, 0.9);
-    color: #05182c;
+/* Viền cam 3px bao TRỌN cột hôm nay (overlay 1 phần tử cho cả cột) */
+.tm-today-col {
+    grid-row: 1 / -1;
+    z-index: 2;
+    pointer-events: none;
+    border: 3px solid var(--evn-orange);
+    border-radius: 10px;
 }
 
 .tm-foot {
     flex-shrink: 0;
-    padding-top: 6px;
+    padding-top: 4px;
 }
 
 .tm-legend {
     display: flex;
     align-items: center;
-    gap: 8px;
-    height: 26px;
-    font-size: 1rem;
-    color: #8aa4c4;
+    gap: 10px;
+    height: 30px;
+    font-size: 1.15rem;
+    /* 18.4px */
+    font-weight: 600;
+    color: #b0c6de;
 }
 
-.tm-today-line {
-    height: 28px;
-    line-height: 28px;
-    font-size: 1rem;
-    color: var(--text-light);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.tm-k {
-    color: #8aa4c4;
+/* Khoá màu trong chú thích: cùng màu với ô ca trực */
+.tm-legend .tm-sh {
+    flex: 0 0 auto;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 1.125rem;
+    /* 18px */
 }
 
 .tm-sep {
     color: rgba(255, 255, 255, 0.3);
+}
+
+/* Màn nhỏ hơn (1280x720…): thu chữ để không vỡ, không tràn */
+@media (max-width: 1500px), (max-height: 800px) {
+    .cal-head-bar {
+        height: 38px;
+        font-size: 1.3rem;
+        letter-spacing: 1px;
+    }
+
+    .tm-day {
+        font-size: 0.85rem;
+    }
+
+    .tm-dow {
+        font-size: 0.7rem;
+    }
+
+    .tm-name {
+        font-size: 1rem;
+        padding: 0 10px 0 9px;
+    }
+
+    .tm-corner {
+        font-size: 0.75rem;
+    }
+
+    .tm-sh {
+        font-size: 0.8rem;
+    }
+
+    .tm-cell.is-both .tm-sh {
+        font-size: 0.7rem;
+    }
+
+    .tm-legend {
+        height: 24px;
+        font-size: 0.95rem;
+    }
+
+    .tm-legend .tm-sh {
+        font-size: 0.9rem;
+        padding: 2px 7px;
+    }
 }
 
 /* ============================================================

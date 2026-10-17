@@ -418,15 +418,17 @@ const Screens = (function () {
         return matrix;
     }
 
-    // Danh sách tên trực 1 ngày, theo đúng thứ tự hàng
-    function dayNames(matrix, d, code) {
-        const key = code === 'C1' ? 'c1' : 'c2';
-        const names = [];
-        matrix.people.forEach((name, i) => {
-            const cell = matrix.byPerson[i][d];
-            if (cell && cell[key]) names.push(name);
-        });
-        return names.length ? names.join(', ') : '—';
+    // Ô ca trực: tô kín ô bằng màu (không còn chip nhỏ).
+    //   1 ca  → 1 khối phủ kín ô
+    //   2 ca  → chia đôi ô trên/dưới (nửa trên C1, nửa dưới C2)
+    function cellHTML(cell) {
+        if (!cell) return '';
+        if (cell.c1 && cell.c2) {
+            return '<span class="tm-sh c1">C1</span><span class="tm-sh c2">C2</span>';
+        }
+        if (cell.c1) return '<span class="tm-sh c1">C1</span>';
+        if (cell.c2) return '<span class="tm-sh c2">C2</span>';
+        return '';
     }
 
     function matrixHTML(now, matrix) {
@@ -437,59 +439,63 @@ const Screens = (function () {
         const dowOf = {};
         for (let d = 1; d <= daysInMonth; d++) dowOf[d] = DOW[(new Date(y, m, d).getDay() + 6) % 7];
 
-        let html = '<div class="tm-corner">Nhân sự</div>';
+        // Đặt vị trí TƯỜNG MINH cho mọi ô: overlay viền cột hôm nay là một grid item,
+        // nếu để auto-placement thì nó chiếm chỗ và đẩy lệch cả bảng.
+        const at = (col, row) => ' style="grid-column:' + col + ';grid-row:' + row + '"';
+
+        let html = '<div class="tm-corner"' + at(1, 1) + '>Nhân sự</div>';
         for (let d = 1; d <= daysInMonth; d++) {
             const cls = ['tm-hd'];
             if (d === today) cls.push('is-today');
             else if (d < today) cls.push('is-past');
             if (dowOf[d] === 'T7' || dowOf[d] === 'CN') cls.push('is-weekend');
-            html += '<div class="' + cls.join(' ') + '">'
+            html += '<div class="' + cls.join(' ') + '"' + at(d + 1, 1) + '>'
                 + '<span class="tm-dow">' + dowOf[d] + '</span>'
                 + '<span class="tm-day">' + d + '</span></div>';
         }
 
         matrix.people.forEach((name, i) => {
-            html += '<div class="tm-name" title="' + esc(name) + '">' + esc(name) + '</div>';
+            const row = i + 2;
+            html += '<div class="tm-name" title="' + esc(name) + '"' + at(1, row) + '>' + esc(name) + '</div>';
             for (let d = 1; d <= daysInMonth; d++) {
                 const cell = matrix.byPerson[i][d];
                 const cls = ['tm-cell'];
+                if (cell && cell.c1 && cell.c2) cls.push('is-both');
                 if (d === today) cls.push('is-today');
                 else if (d < today) cls.push('is-past');
                 if (dowOf[d] === 'T7' || dowOf[d] === 'CN') cls.push('is-weekend');
-                let chips = '';
-                if (cell && cell.c1) chips += '<span class="tm-chip c1">C1</span>';
-                if (cell && cell.c2) chips += '<span class="tm-chip c2">C2</span>';
-                html += '<div class="' + cls.join(' ') + '">' + chips + '</div>';
+                html += '<div class="' + cls.join(' ') + '"' + at(d + 1, row) + '>' + cellHTML(cell) + '</div>';
             }
         });
 
-        const style = 'grid-template-columns:260px repeat(' + daysInMonth + ',minmax(0,1fr));'
+        // Viền cam 3px bao TRỌN cột hôm nay (một overlay phủ cả cột, không thêm DOM cho từng ô)
+        if (today >= 1 && today <= daysInMonth) {
+            html += '<div class="tm-today-col"' + at(today + 1, '1/-1') + '></div>';
+        }
+
+        // Cột tên dùng max-content: tên dài nhất không bao giờ bị cắt
+        const style = 'grid-template-columns:max-content repeat(' + daysInMonth + ',minmax(0,1fr));'
             + 'grid-template-rows:44px repeat(' + matrix.people.length + ',minmax(0,1fr))';
         return '<div class="tm-grid" style="' + style + '">' + html + '</div>';
     }
 
     function monthPageHTML(now, matrix, isFallback) {
-        const today = now.getDate();
-        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const tomorrow = today < daysInMonth ? today + 1 : 0;
-        const line = d => 'Ca 1 ' + dayNames(matrix, d, 'C1') + ' / Ca 2 ' + dayNames(matrix, d, 'C2');
         return '<div class="cal-head-bar">LỊCH TRỰC THÁNG ' + p2(now.getMonth() + 1) + '/' + now.getFullYear()
             + (isFallback ? '<span class="cal-note">dùng lịch trực đang có</span>' : '')
             + '</div>'
             + matrixHTML(now, matrix)
-            + '<div class="tm-foot">'
-            + '<div class="tm-legend"><span class="tm-chip c1">C1</span> 06:00–18:00'
-            + '<span class="tm-sep">·</span><span class="tm-chip c2">C2</span> 18:00–06:00</div>'
-            + '<div class="tm-today-line"><span class="tm-k">Hôm nay:</span> ' + esc(line(today))
-            + '<span class="tm-sep">;</span><span class="tm-k">Ngày mai:</span> '
-            + esc(tomorrow ? line(tomorrow) : '—') + '</div>'
-            + '</div>';
+            + '<div class="tm-foot"><div class="tm-legend">'
+            + '<span class="tm-sh c1">C1</span> Ca ngày 06:00–18:00'
+            + '<span class="tm-sep">·</span>'
+            + '<span class="tm-sh c2">C2</span> Ca đêm 18:00–06:00'
+            + '</div></div>';
     }
 
     // ============================================================
-    //  KHAI BÁO 4 MÀN CHO VÒNG XOAY (js/tabs.js)
+    //  KHAI BÁO CÁC MÀN CHO VÒNG XOAY (js/tabs.js)
     //  - status: ok | empty | nokey | error | loading
     //  - items : danh sách dòng để chia trang (tabs lo phần chia trang)
+    //  - manual: true → KHÔNG tự xoay, chỉ mở khi bấm tab (Lịch trực tháng)
     // ============================================================
     const SCREEN_DEFS = [
         {
@@ -529,6 +535,10 @@ const Screens = (function () {
             label: 'LỊCH TRỰC THÁNG',
             duration: ROTATION.LICH_TRUC_MS,
             single: true,
+            // KHÔNG nằm trong vòng xoay tự động: chỉ mở khi bấm chuột vào tab
+            // (hoặc phím ↓ / phím số). Mở ra thì vòng xoay tạm dừng —
+            // xem ROTATION.MANUAL_HOLD_MS trong js/config.js.
+            manual: true,
             sig: function () { return state.thang.sig || state.thang.status; },
             page: function (now) {
                 const firstIso = isoDate(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -547,7 +557,8 @@ const Screens = (function () {
             id: 'suco',
             label: 'SỰ CỐ CÒN TỒN',
             duration: ROTATION.SU_CO_MS,
-            rowHeight: 100,
+            // Thẻ sự cố cao 116px + 2px margin (chữ trong thẻ đã +2px)
+            rowHeight: 118,
             headHeight: 48,
             noteHeight: 30,
             minRows: 2,
