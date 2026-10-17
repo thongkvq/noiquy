@@ -680,6 +680,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load lịch trực: NAS (Sheets dự phòng) → bản lưu trong máy → fallback
     loadScheduleData();
 
+    // MÀN MỚI + VÒNG XOAY + THỜI TIẾT (js/screens.js, js/tabs.js, js/weather.js)
+    if (typeof Screens !== 'undefined') Screens.init();   // khoá đọc + dữ liệu 3 màn mới
+    if (typeof Tabs !== 'undefined') Tabs.init();         // dải tab + vòng xoay 4 màn
+    if (typeof Weather !== 'undefined') Weather.init();   // thời tiết trên header
+
     // Khởi tạo tính năng Kiosk Mode (Toàn màn hình)
     initKioskMode();
 
@@ -688,7 +693,11 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', positionSourceBadge);
 
     // Tải lại dữ liệu NGẦM mỗi 5 phút — không tải lại trang, chỉ vẽ lại phần lịch
-    setInterval(loadScheduleData, (typeof REFRESH_MS === 'number') ? REFRESH_MS : 5 * 60 * 1000);
+    // (lịch công tác / sự cố tồn / lịch trực tháng dùng CHUNG nhịp này)
+    setInterval(() => {
+        loadScheduleData();
+        if (typeof Screens !== 'undefined') Screens.refresh();
+    }, (typeof REFRESH_MS === 'number') ? REFRESH_MS : 5 * 60 * 1000);
 
     // Tải lại cả trang 1 lần mỗi ngày lúc 04:00 sáng
     scheduleDailyReload();

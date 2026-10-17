@@ -610,3 +610,716 @@ body.kiosk-active .kiosk-btn:hover {
         min-height: 52px;
     }
 }
+/* ============================================================
+   VÒNG XOAY MÀN HÌNH (dải tab + 4 màn)
+   Ràng buộc TV box yếu: KHÔNG blur, KHÔNG box-shadow động,
+   chuyển cảnh chỉ bằng opacity/transform.
+   ============================================================ */
+.content-area {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* --- Dải tab nhỏ ở đầu vùng nội dung --- */
+.tab-strip {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding-bottom: 7px;
+}
+
+.tab-list {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab {
+    font-family: 'Jura', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: #8aa4c4;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    padding: 5px 16px;
+    cursor: pointer;
+    transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.tab.is-active {
+    color: #ffffff;
+    background: rgba(243, 112, 33, 0.18);
+    border-color: rgba(243, 112, 33, 0.65);
+}
+
+.tab-page {
+    margin-left: auto;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #b0d0ff;
+    white-space: nowrap;
+}
+
+.tab-page[hidden] {
+    display: none;
+}
+
+/* Thanh tiến trình mảnh của màn hiện tại (animate transform, không animate width) */
+.tab-progress {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.tab-progress > i {
+    display: block;
+    height: 100%;
+    width: 100%;
+    transform: scaleX(0);
+    transform-origin: left center;
+    background: linear-gradient(to right, rgba(243, 112, 33, 0.75), var(--evn-orange));
+}
+
+/* --- Vùng chứa màn: các lớp phủ nhau, chỉ đổi opacity --- */
+.screen-host {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+.screen-layer {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    will-change: opacity;
+}
+
+.screen-layer.is-active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.screen-layer > .dashboard-grid {
+    height: 100%;
+}
+
+/* Khung chung cho màn 2-4 (đồng bộ với .glass-panel) */
+.screen-body {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-highlight);
+    border-left: 1px solid var(--glass-highlight);
+    border-radius: 20px;
+    padding: 0.9rem 1.3rem 0.7rem;
+}
+
+.rows {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.rows-note {
+    flex-shrink: 0;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #8aa4c4;
+    border-top: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+/* Thông báo gọn khi thiếu khoá / lỗi / không có dữ liệu */
+.screen-msg {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-top: 1px solid var(--glass-highlight);
+    border-left: 1px solid var(--glass-highlight);
+    border-radius: 20px;
+    font-family: 'Jura', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #b0d0ff;
+}
+
+.screen-msg.is-nokey {
+    color: #fbbf24;
+}
+
+.screen-msg.is-error {
+    color: #ef4444;
+}
+
+.screen-msg.is-empty {
+    color: #34d399;
+}
+
+/* ============================================================
+   MÀN 2 — LỊCH CÔNG TÁC CÁC ĐƠN VỊ
+   ============================================================ */
+.ct-row {
+    display: grid;
+    /* Trạng thái · Thời gian · Vị trí/Phạm vi ảnh hưởng (rộng nhất) · Đơn vị · Số CV */
+    grid-template-columns: 132px 250px minmax(0, 1fr) 210px 74px;
+    align-items: center;
+    gap: 14px;
+    height: 64px;
+    padding: 0 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 1.02rem;
+    border-left: 3px solid transparent;
+}
+
+.ct-row > div {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.ct-head {
+    height: 44px;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #8aa4c4;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+    border-left-color: transparent;
+}
+
+.ct-row.is-now {
+    background: rgba(243, 112, 33, 0.1);
+    border-left-color: var(--evn-orange);
+}
+
+.ct-row.is-today {
+    border-left-color: rgba(243, 112, 33, 0.45);
+}
+
+.ct-time {
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 0.98rem;
+}
+
+.ct-row.is-now .ct-time {
+    color: var(--evn-orange);
+}
+
+.ct-unit {
+    color: #b0d0ff;
+}
+
+/* Cột chính: chữ lớn hơn một chút, xuống tối đa 2 dòng rồi mới cắt "…" */
+.ct-row > .ct-zone {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow: hidden;
+    font-size: 1.12rem;
+    line-height: 1.26;
+    font-weight: 500;
+    color: #dceaff;
+}
+
+.ct-cv {
+    text-align: right;
+    color: rgba(176, 208, 255, 0.62);
+    font-size: 0.85rem;
+}
+
+.ct-head > div:last-child {
+    text-align: right;
+}
+
+.ct-chip {
+    display: inline-block;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ct-chip.is-now {
+    background: var(--evn-orange);
+    color: #05121f;
+}
+
+.ct-chip.is-today {
+    background: rgba(243, 112, 33, 0.2);
+    border: 1px solid rgba(243, 112, 33, 0.6);
+    color: var(--evn-orange);
+}
+
+/* ============================================================
+   MÀN 4 — SỰ CỐ CÒN TỒN
+   ============================================================ */
+.sc-sum {
+    flex-shrink: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sc-total {
+    font-family: 'Jura', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #ffffff;
+    text-transform: uppercase;
+}
+
+.sc-total b {
+    color: var(--evn-orange);
+    font-size: 1.5rem;
+    margin-left: 4px;
+}
+
+.sc-upd {
+    margin-left: auto;
+    font-size: 0.85rem;
+    color: #8aa4c4;
+}
+
+.sc-chip {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+}
+
+.sc-card {
+    height: 98px;
+    overflow: hidden;
+    padding: 8px 12px;
+    margin-bottom: 2px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 4px solid rgba(255, 255, 255, 0.2);
+}
+
+.sc-card.sc-red {
+    border-left-color: #ff4d4d;
+}
+
+.sc-card.sc-purple {
+    border-left-color: #a855f7;
+}
+
+.sc-card.sc-green {
+    border-left-color: #34d399;
+}
+
+.sc-card.sc-gray {
+    border-left-color: #fbbf24;
+}
+
+.sc-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+}
+
+.sc-badge {
+    flex-shrink: 0;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    color: #05121f;
+    background: #9fb3c8;
+}
+
+.sc-red .sc-badge {
+    background: #ff4d4d;
+    color: #fff;
+}
+
+.sc-purple .sc-badge {
+    background: #a855f7;
+    color: #fff;
+}
+
+.sc-green .sc-badge {
+    background: #34d399;
+}
+
+.sc-gray .sc-badge {
+    background: #fbbf24;
+}
+
+.sc-red {
+    color: #ff4d4d;
+}
+
+.sc-purple {
+    color: #a855f7;
+}
+
+.sc-green {
+    color: #34d399;
+}
+
+.sc-gray {
+    color: #fbbf24;
+}
+
+.sc-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.sc-svc {
+    flex-shrink: 0;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #b0d0ff;
+}
+
+.sc-line {
+    font-size: 0.95rem;
+    line-height: 1.35;
+    color: var(--text-light);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.sc-line.sc-dim {
+    color: #9fb3c8;
+}
+
+.sc-k {
+    font-family: 'Jura', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #8aa4c4;
+}
+
+.sc-sep {
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.sc-ton {
+    color: var(--evn-orange);
+    font-weight: 600;
+}
+
+/* ============================================================
+   MÀN 3 — LỊCH TRỰC THÁNG
+   ============================================================ */
+.cal-head-bar {
+    flex-shrink: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: 'Jura', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #ffffff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.cal-note {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: #8aa4c4;
+}
+
+/* Bảng ma trận: hàng = nhân sự, cột = ngày trong tháng.
+   Số cột/hàng do JS đặt qua style inline (grid-template-columns/rows). */
+.tm-grid {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    gap: 3px;
+    overflow: hidden;
+}
+
+.tm-corner {
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-family: 'Jura', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #8aa4c4;
+}
+
+.tm-hd {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tm-dow {
+    font-family: 'Jura', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    line-height: 1.1;
+    color: #8aa4c4;
+}
+
+.tm-day {
+    font-family: 'Jura', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: #ffffff;
+}
+
+.tm-hd.is-weekend {
+    background: rgba(120, 170, 235, 0.16);
+}
+
+.tm-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tm-cell.is-weekend {
+    background: rgba(120, 170, 235, 0.1);
+}
+
+.tm-name {
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #e8f2ff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ngày đã qua: giảm độ sáng cả cột */
+.tm-hd.is-past,
+.tm-cell.is-past {
+    opacity: 0.45;
+}
+
+/* Cột hôm nay: nền + viền cam cho cả cột, kể cả tiêu đề */
+.tm-hd.is-today {
+    background: rgba(243, 112, 33, 0.28);
+    border-color: var(--evn-orange);
+}
+
+.tm-hd.is-today .tm-dow,
+.tm-hd.is-today .tm-day {
+    color: #ffd9bd;
+}
+
+.tm-cell.is-today {
+    background: rgba(243, 112, 33, 0.16);
+    border-left-color: var(--evn-orange);
+    border-right-color: var(--evn-orange);
+}
+
+/* Chip ca trực — chữ 1rem = 16px, đọc rõ từ xa */
+.tm-chip {
+    display: inline-block;
+    font-family: 'Jura', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+    padding: 1px 5px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.tm-chip.c1 {
+    background: rgba(250, 190, 90, 0.92);
+    color: #3a2205;
+}
+
+.tm-chip.c2 {
+    background: rgba(60, 145, 240, 0.9);
+    color: #05182c;
+}
+
+.tm-foot {
+    flex-shrink: 0;
+    padding-top: 6px;
+}
+
+.tm-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 26px;
+    font-size: 1rem;
+    color: #8aa4c4;
+}
+
+.tm-today-line {
+    height: 28px;
+    line-height: 28px;
+    font-size: 1rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tm-k {
+    color: #8aa4c4;
+}
+
+.tm-sep {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================
+   THỜI TIẾT TRÊN HEADER (ngay bên trái đồng hồ)
+   ============================================================ */
+.weather-widget {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 5px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.weather-widget[hidden] {
+    display: none;
+}
+
+.w-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.w-icon svg {
+    width: 40px;
+    height: 40px;
+}
+
+.w-body {
+    min-width: 0;
+}
+
+.w-line1 {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-family: 'Jura', sans-serif;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+.w-temp {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--evn-orange);
+}
+
+.w-desc {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+
+.w-feels {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #8aa4c4;
+}
+
+.w-line2 {
+    margin-top: 2px;
+    font-size: 0.82rem;
+    letter-spacing: 0.5px;
+    color: #b0d0ff;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tab-progress > i {
+        transition: none !important;
+    }
+}

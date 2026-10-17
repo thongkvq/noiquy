@@ -52,6 +52,7 @@ const NAS_CONFIG = {
     TIMEOUT_MS: 8000,
     // NAS lưu tên viết tắt; đổi sang tên đầy đủ như cột của sheet LichTrucMoi.
     // Tên không có trong bảng thì giữ nguyên.
+    // THỨ TỰ các khoá dưới đây = thứ tự hàng của bảng "Lịch trực tháng".
     TEN_DAY_DU: {
         'ĐứcTM': 'Tống Minh Đức',
         'GiangLT': 'Lê Trường Giang',
@@ -88,3 +89,57 @@ const REFRESH_MS = 5 * 60 * 1000; // 5 phút
 
 // Giờ tải lại CẢ TRANG mỗi ngày (để TV nhận code mới sau khi deploy)
 const DAILY_RELOAD_HOUR = 4; // 04:00 sáng
+
+// ============================================================
+//  API CÔNG KHAI MỚI (NAS) — cần KHOÁ ĐỌC qua header X-Read-Key
+//  Khoá KHÔNG nằm trong source: mở web kèm #key=<khoá> MỘT LẦN,
+//  web lưu vào localStorage (noiquy.readKey) rồi xoá hash khỏi địa chỉ.
+//  (Xem initReadKey trong js/screens.js)
+//
+//  Lỗi có thể gặp: 401 invalid_read_key · 503 public_read_key_not_configured · 429
+// ============================================================
+const API_CONFIG = {
+    BASE: 'https://database-dhcs.paroda.net/v2/public',
+    URL_LICH_CONG_TAC: 'https://database-dhcs.paroda.net/v2/public/lich-cong-tac',
+    URL_SU_CO_TON: 'https://database-dhcs.paroda.net/v2/public/su-co-ton',
+    READ_KEY_STORAGE: 'noiquy.readKey',
+    READ_KEY_HEADER: 'X-Read-Key',
+    TIMEOUT_MS: 8000,
+    // Số ngày tới lấy cho màn "Lịch công tác các đơn vị" (hôm nay .. +6)
+    CONG_TAC_DAYS: 7,
+};
+
+// ============================================================
+//  THỜI TIẾT TRÊN HEADER — Open-Meteo (không cần khoá)
+//  Toạ độ khu chung cư Melody, Tân Phú, TP.HCM
+// ============================================================
+const WEATHER_CONFIG = {
+    URL: 'https://api.open-meteo.com/v1/forecast?latitude=10.786&longitude=106.637'
+        + '&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m'
+        + '&hourly=precipitation_probability&forecast_hours=3&timezone=Asia%2FHo_Chi_Minh',
+    TEN_KHU_VUC: 'Tân Phú',
+    REFRESH_MS: 10 * 60 * 1000,  // 10 phút
+    TIMEOUT_MS: 8000,
+    STORAGE_KEY: 'noiquy.weather', // giữ số liệu cũ khi mất mạng
+};
+
+// ============================================================
+//  VÒNG XOAY MÀN HÌNH (tab tự chuyển)
+//  Màn 1 "Nội quy" = màn cũ (4 khung nội quy + sidebar ca trực).
+//  Màn 2-4 chiếm đúng vùng của 4 khung nội quy; header/footer/sidebar giữ nguyên.
+//
+//  Chia trang: mỗi trang tối thiểu MIN_PAGE_MS, tối đa MAX_PAGE_MS;
+//  nếu chia nhiều trang thì thời lượng màn được kéo dài cho đủ
+//  (tối đa MAX_PAGES trang, phần dư cắt bớt và ghi "+N mục").
+// ============================================================
+const ROTATION = {
+    ENABLED: true,
+    FADE_MS: 400,          // chuyển màn bằng opacity
+    NOI_QUY_MS: 60000,     // 60s
+    CONG_TAC_MS: 30000,    // 30s
+    LICH_TRUC_MS: 20000,   // 20s
+    SU_CO_MS: 30000,       // 30s
+    MIN_PAGE_MS: 10000,    // 10s/trang
+    MAX_PAGE_MS: 30000,    // 30s/trang
+    MAX_PAGES: 3,          // tối đa 3 trang/màn
+};

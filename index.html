@@ -24,6 +24,8 @@
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                 </svg>
             </button>
+            <!-- Thời tiết (Open-Meteo) — ngay bên trái đồng hồ; js/weather.js vẽ nội dung -->
+            <div class="weather-widget" id="weatherWidget" hidden></div>
             <div class="time-widget">
                 <div class="clock" id="clock">00<span class="blink-c">:</span>00</div>
                 <div class="date" id="date">Thứ Hai, 01/01/2024</div>
@@ -109,8 +111,18 @@
             </div>
         </div>
 
-        <!-- 4 BẢNG NỘI QUY CHÍNH -->
-        <div class="dashboard-grid">
+        <!-- VÙNG NỘI DUNG: dải tab + 4 màn xoay vòng -->
+        <div class="content-area">
+            <div class="tab-strip">
+                <div class="tab-list" id="tabList"><!-- Nhãn tab do js/tabs.js vẽ --></div>
+                <div class="tab-page" id="tabPage" hidden>Trang 1/1</div>
+                <div class="tab-progress"><i id="tabProgress"></i></div>
+            </div>
+
+            <div class="screen-host" id="screenHost">
+                <!-- Màn 1: Nội quy (4 khung, DOM tĩnh — không vẽ lại) -->
+                <div class="screen-layer is-active" id="screenStatic">
+                    <div class="dashboard-grid">
             <!-- Panel 1 -->
             <div class="glass-panel">
                 <div class="panel-header">
@@ -181,6 +193,12 @@
                     </ul>
                 </div>
             </div>
+                    </div>
+                </div>
+                <!-- 2 lớp luân phiên cho màn 2-4 (cross-fade opacity, không vẽ lại lớp đang ẩn) -->
+                <div class="screen-layer" id="screenDynA"></div>
+                <div class="screen-layer" id="screenDynB"></div>
+            </div>
         </div>
     </div> <!-- End Main Wrapper -->
 
@@ -201,6 +219,9 @@
 
     <script src="js/config.js"></script>
     <script src="js/content.js"></script>
+    <script src="js/weather.js"></script>
+    <script src="js/screens.js"></script>
+    <script src="js/tabs.js"></script>
     <script src="js/app.js"></script>
 </body>
 
