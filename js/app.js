@@ -48,7 +48,7 @@ const FALLBACK_SCHEDULE = {
     "31/5/2026": { C1: ["Nguyễn Ngọc Lâm"], C2: ["Nguyễn Minh Quang", "Đỗ Thành Công"] },
 };
 
-// Dữ liệu đang hoạt động (sẽ được ghi đè bởi Sheets nếu cấu hình thành công)
+// Dữ liệu đang hoạt động (sẽ được ghi đè bởi NAS, hoặc Sheets dự phòng, nếu tải thành công)
 let scheduleData = Object.assign({}, FALLBACK_SCHEDULE);
 
 // ============================================================
@@ -305,9 +305,11 @@ function setStatusNote(state) {
     const note = document.querySelector('.schedule-note');
     if (!note) return;
     const messages = {
-        live:   '🟢 Đồng bộ từ Google Sheets.',
-        local:  '🟡 Dùng dữ liệu nội bộ (chưa cấu hình Sheets).',
-        error:  '🔴 Lỗi kết nối Sheets — hiển thị dữ liệu nội bộ.',
+        nas:               '🟢 Đồng bộ từ NAS.',
+        live:              '🟢 Đồng bộ từ Google Sheets.',
+        'sheets-fallback': '🟡 NAS lỗi — dùng Google Sheets.',
+        local:             '🟡 Dùng dữ liệu nội bộ (chưa cấu hình Sheets).',
+        error:             '🔴 Lỗi kết nối Sheets — hiển thị dữ liệu nội bộ.',
     };
     note.textContent = messages[state] || '';
 }
@@ -322,34 +324,105 @@ async function fetchCSV(url) {
 }
 
 // ============================================================
-//  LOAD DỮ LIỆU TỪ GOOGLE SHEETS
+//  FETCH lịch trực từ API public trên NAS
+//  Thành công khi: HTTP 200 + JSON có `rows` là mảng không rỗng.
+//  Trả về mảng rows (dùng thẳng cho buildScheduleData).
+// ============================================================
+async function fetchNASLichTruc() {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), NAS_CONFIG.TIMEOUT_MS);
+    try {
+        const res = await fetch(NAS_CONFIG.URL_LICH_TRUC, {
+            cache: 'no-store',
+            headers: { Accept: 'application/json' },
+            signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const payload = await res.json();
+        if (!payload || !Array.isArray(payload.rows)) {
+            throw new Error('JSON không có mảng rows');
+        }
+        if (payload.rows.length === 0) {
+            throw new Error('rows rỗng');
+        }
+        return payload.rows;
+    } catch (err) {
+        if (err && err.name === 'AbortError') {
+            throw new Error(`quá hạn ${NAS_CONFIG.TIMEOUT_MS}ms`);
+        }
+        throw err;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+// ============================================================
+//  LOAD LỊCH TRỰC + DỮ LIỆU PHỤ
+//  1) Lịch trực: NAS → Google Sheets LichTrucMoi → FALLBACK_SCHEDULE
+//  2) CauHinh / NoiQuy: luôn lấy từ Sheets, không chặn bước lịch trực
 // ============================================================
 async function loadFromSheets() {
     const id = SHEETS_CONFIG.SHEET_ID;
-
-    // Chưa cấu hình Sheet ID
-    if (!id || id === 'YOUR_SHEET_ID_HERE') {
-        console.warn('[Sheets] Chưa cấu hình SHEET_ID trong js/config.js');
-        setStatusNote('local');
-        renderFallbackPanels();
-        updateScheduleDisplay(new Date(), true);
-        return;
+    const hasSheetsId = Boolean(id) && id !== 'YOUR_SHEET_ID_HERE';
+    if (!hasSheetsId) {
+        console.warn('[Sheets] Chưa cấu hình SHEET_ID trong js/config.js — chỉ dùng NAS (nếu bật).');
     }
 
     setLoadingState(true);
 
-    try {
-        // Tải lịch trực trước để sidebar không bị kẹt "Đang tải" nếu sheet khác chậm/lỗi.
-        const scheduleCSV = await fetchCSV(SHEETS_CONFIG.URL_LICH_TRUC);
-        const rows = parseCSV(scheduleCSV);
-        if (rows.length > 0) {
-            scheduleData = buildScheduleData(rows);
-            console.log(`[Sheets] Đã tải ${Object.keys(scheduleData).length} ngày trực từ Sheets.`);
-        }
-        setStatusNote('live');
-        updateScheduleDisplay(new Date(), true);
+    let scheduleSource = null; // 'nas' | 'sheets' | null
 
-        // Tải các sheet phụ sau, lỗi sheet phụ không được chặn lịch trực.
+    // (a) NAS là nguồn chính
+    if (typeof NAS_CONFIG !== 'undefined' && NAS_CONFIG.ENABLED) {
+        try {
+            const rows = await fetchNASLichTruc();
+            const nasData = buildScheduleData(rows);
+            // NAS thiếu ngày trực hiện tại (trước 6h tính là hôm trước) → coi như lỗi để dùng Sheets.
+            const effectiveDate = new Date();
+            if (effectiveDate.getHours() < 6) effectiveDate.setDate(effectiveDate.getDate() - 1);
+            const todayKey = `${effectiveDate.getDate()}/${effectiveDate.getMonth() + 1}/${effectiveDate.getFullYear()}`;
+            if (!nasData[todayKey]) throw new Error(`thiếu lịch ngày ${todayKey}`);
+            scheduleData = nasData;
+            scheduleSource = 'nas';
+            console.log(`[NAS] Đã tải ${Object.keys(scheduleData).length} ngày trực từ NAS.`);
+        } catch (err) {
+            console.warn('[NAS] Không tải được lịch trực từ NAS:', (err && err.message) || err);
+        }
+    } else {
+        console.warn('[NAS] Nguồn NAS đang tắt (NAS_CONFIG.ENABLED = false).');
+    }
+
+    // (b) Sheets dự phòng khi NAS tắt/lỗi/rỗng
+    if (!scheduleSource && hasSheetsId) {
+        try {
+            const scheduleCSV = await fetchCSV(SHEETS_CONFIG.URL_LICH_TRUC);
+            const rows = parseCSV(scheduleCSV);
+            if (rows.length > 0) {
+                scheduleData = buildScheduleData(rows);
+                scheduleSource = 'sheets';
+                console.log(`[Sheets] Đã tải ${Object.keys(scheduleData).length} ngày trực từ Sheets (dự phòng).`);
+            } else {
+                console.warn('[Sheets] Sheet LichTrucMoi rỗng.');
+            }
+        } catch (err) {
+            console.warn('[Sheets] Lỗi tải lịch trực:', (err && err.message) || err);
+        }
+    }
+
+    // (c) Cả hai lỗi → giữ FALLBACK_SCHEDULE đang có
+    if (scheduleSource === 'nas') {
+        setStatusNote('nas');
+    } else if (scheduleSource === 'sheets') {
+        setStatusNote('sheets-fallback');
+    } else {
+        setStatusNote(hasSheetsId ? 'error' : 'local');
+    }
+
+    updateScheduleDisplay(new Date(), true);
+
+    // Tải các sheet phụ sau, lỗi sheet phụ không được chặn lịch trực.
+    if (hasSheetsId) {
         Promise.allSettled([
             fetchCSV(SHEETS_CONFIG.URL_CAU_HINH),
             fetchCSV(SHEETS_CONFIG.URL_NOI_QUY),
@@ -372,14 +445,9 @@ async function loadFromSheets() {
                 renderFallbackPanels();
             }
         });
-
-    } catch (err) {
-        console.error('[Sheets] Lỗi không xác định:', err);
-        setStatusNote('error');
+    } else {
         renderFallbackPanels();
     }
-
-    updateScheduleDisplay(new Date(), true);
 }
 
 // ============================================================
@@ -549,12 +617,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateClock();
     setInterval(updateClock, 60 * 1000);
 
-    // Load dữ liệu từ Google Sheets
+    // Load dữ liệu: lịch trực từ NAS (Sheets dự phòng) + CauHinh/NoiQuy từ Sheets
     loadFromSheets();
 
     // Khởi tạo tính năng Kiosk Mode (Toàn màn hình)
     initKioskMode();
 
-    // Reload trang mỗi 30 phút để lấy dữ liệu mới nhất từ Sheets
+    // Reload trang mỗi 30 phút để lấy dữ liệu mới nhất từ NAS/Sheets
     setTimeout(() => { location.reload(); }, 30 * 60 * 1000);
 });

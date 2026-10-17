@@ -1,7 +1,15 @@
 /**
  * ============================================================
- *  CẤU HÌNH KẾT NỐI GOOGLE SHEETS
+ *  CẤU HÌNH NGUỒN DỮ LIỆU
  * ============================================================
+ *
+ *  LỊCH TRỰC: lấy từ NAS trước (NAS_CONFIG), Google Sheets chỉ là DỰ PHÒNG.
+ *  Thứ tự trong js/app.js:
+ *    a) NAS  — GET /v2/public/lich-truc (JSON, cột `Ngày` + cột nhân sự, ô C1/C2)
+ *    b) Sheets — sheet LichTrucMoi (CSV) khi NAS tắt/lỗi/rỗng
+ *    c) FALLBACK_SCHEDULE trong js/app.js khi cả hai lỗi
+ *
+ *  CauHinh và NoiQuy vẫn luôn lấy từ Google Sheets như trước.
  *
  *  Hướng dẫn:
  *  1. Tạo Google Sheets với các sheet tên: LichTrucMoi, LichTruc, CauHinh, NoiQuy
@@ -32,6 +40,19 @@
  *  | note    | Ghi chú hiển thị ở cuối sidebar...     |
  * ============================================================
  */
+
+// ============================================================
+//  CẤU HÌNH NGUỒN LỊCH TRỰC TRÊN NAS (nguồn chính)
+//  API public, trả JSON:
+//  { source, from, to, columns, rows: [{ "Ngày": "9/9/2026", "LâmNN": "C2", ... }], updated_at }
+//  `rows` cùng dạng object như các dòng CSV của sheet ma trận LichTrucMoi
+//  nên dùng thẳng được với buildScheduleData().
+// ============================================================
+const NAS_CONFIG = {
+    ENABLED: true,
+    URL_LICH_TRUC: 'https://database-dhcs.paroda.net/v2/public/lich-truc',
+    TIMEOUT_MS: 8000,
+};
 const SHEETS_CONFIG = {
     // ⚠️ ĐÃY LÀ SHEET ID THỰC TỜ
     SHEET_ID: '1CAH2EKk8BStCRtPVCH8ute_us9yi_7_UBdK0WHQN4_c',
