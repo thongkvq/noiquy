@@ -123,7 +123,8 @@ const Screens = (function () {
         const controller = new AbortController();
         const t = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT_MS);
         const headers = { Accept: 'application/json' };
-        if (useKey) headers[API_CONFIG.READ_KEY_HEADER] = syncReadKey();
+        // API hiện đọc công khai; khoá chỉ gửi nếu máy còn lưu (phòng khi bật lại khoá)
+        if (useKey && syncReadKey()) headers[API_CONFIG.READ_KEY_HEADER] = syncReadKey();
         try {
             const res = await fetch(url, { cache: 'no-store', headers: headers, signal: controller.signal });
             if (!res.ok) {
@@ -150,10 +151,6 @@ const Screens = (function () {
 
     // ---------- nạp dữ liệu ----------
     async function loadCongTac(now) {
-        if (!syncReadKey()) {
-            state.congtac.status = state.congtac.rows.length ? 'ok' : 'nokey';
-            return;
-        }
         const from = isoDate(now);
         const to = isoDate(addDays(now, (API_CONFIG.CONG_TAC_DAYS || 7) - 1));
         const url = API_CONFIG.URL_LICH_CONG_TAC + '?from=' + from + '&to=' + to;
@@ -176,10 +173,6 @@ const Screens = (function () {
     }
 
     async function loadSuCo() {
-        if (!syncReadKey()) {
-            state.suco.status = state.suco.rows.length ? 'ok' : 'nokey';
-            return;
-        }
         try {
             const payload = await fetchPublicJson(API_CONFIG.URL_SU_CO_TON, true);
             const rows = rowsOf(payload);
