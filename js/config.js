@@ -7,12 +7,15 @@
  *  Thứ tự trong js/app.js:
  *    a) NAS  — GET /v2/public/lich-truc (JSON, cột `Ngày` + cột nhân sự, ô C1/C2)
  *    b) Sheets — sheet LichTrucMoi (CSV) khi NAS tắt/lỗi/rỗng
- *    c) FALLBACK_SCHEDULE trong js/app.js khi cả hai lỗi
+ *    c) Bản lưu trong localStorage (key `noiquy.lastSchedule`) khi cả hai lỗi
+ *    d) FALLBACK_SCHEDULE trong js/app.js khi chưa từng tải được lần nào
  *
- *  CauHinh và NoiQuy vẫn luôn lấy từ Google Sheets như trước.
+ *  NỘI QUY và CẤU HÌNH (ticker, note): đã hardcode trong js/content.js,
+ *  KHÔNG tải từ Google Sheets nữa. Google Sheets chỉ còn dùng làm DỰ PHÒNG
+ *  cho LỊCH TRỰC (sheet LichTrucMoi).
  *
  *  Hướng dẫn:
- *  1. Tạo Google Sheets với các sheet tên: LichTrucMoi, LichTruc, CauHinh, NoiQuy
+ *  1. Sheet cần có duy nhất tab lịch trực: LichTrucMoi
  *  2. Chia sẻ "Anyone with the link can view"
  *  3. Copy phần SHEET_ID từ URL của Sheets:
  *     https://docs.google.com/spreadsheets/d/[SHEET_ID]/edit
@@ -33,11 +36,6 @@
  *  Vẫn hỗ trợ cấu trúc cũ:
  *  | Ngay       | C1              | C2                                        |
  *  | 20/4/2026  | Tống Minh Đức   | Nguyễn Hoàng Tiến Lâm;Khương Vũ Quang Thông |
- *
- *  Cấu trúc sheet CauHinh (dòng đầu là header):
- *  | key     | value                                  |
- *  | ticker  | Nội dung dòng chạy ở footer...         |
- *  | note    | Ghi chú hiển thị ở cuối sidebar...     |
  * ============================================================
  */
 
@@ -68,23 +66,25 @@ const SHEETS_CONFIG = {
     // ⚠️ ĐÃY LÀ SHEET ID THỰC TỜ
     SHEET_ID: '1CAH2EKk8BStCRtPVCH8ute_us9yi_7_UBdK0WHQN4_c',
 
-    // Tên các sheet (phân biệt hoa thường - gõ đúng y như tên tab)
+    // Tên sheet lịch trực (phân biệt hoa thường - gõ đúng y như tên tab)
     // Web đang đọc LichTrucMoi; giữ LichTruc làm bản cũ dự phòng.
     SHEET_LICH_TRUC: 'LichTrucMoi',
-    SHEET_CAU_HINH: 'CauHinh',
-    SHEET_NOI_QUY: 'NoiQuy',
 
     // URL tự động tính từ SHEET_ID (không cần sửa)
     get URL_LICH_TRUC() {
         return `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(this.SHEET_LICH_TRUC)}`;
     },
-    get URL_CAU_HINH() {
-        return `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(this.SHEET_CAU_HINH)}`;
-    },
-    get URL_NOI_QUY() {
-        return `https://docs.google.com/spreadsheets/d/${this.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(this.SHEET_NOI_QUY)}`;
-    },
 
     // Thời gian cache (ms) — không fetch lại nếu chưa hết
     CACHE_TTL_MS: 5 * 60 * 1000, // 5 phút
 };
+
+// ============================================================
+//  NHỊP TẢI LẠI DỮ LIỆU NGẦM (không tải lại trang)
+//  Mỗi 5 phút: tải lại lịch trực (NAS → Sheets → bản lưu → fallback)
+//  và chỉ vẽ lại phần lịch, nhãn nguồn ở góc dưới cập nhật theo.
+// ============================================================
+const REFRESH_MS = 5 * 60 * 1000; // 5 phút
+
+// Giờ tải lại CẢ TRANG mỗi ngày (để TV nhận code mới sau khi deploy)
+const DAILY_RELOAD_HOUR = 4; // 04:00 sáng

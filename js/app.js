@@ -1,5 +1,6 @@
 // ============================================================
-//  FALLBACK DATA — dùng khi Sheets chưa cấu hình hoặc fetch lỗi
+//  DỮ LIỆU LỊCH TRỰC DỰ PHÒNG CUỐI CÙNG
+//  Chỉ dùng khi: NAS lỗi + Sheets lỗi + chưa từng có bản lưu trong máy.
 // ============================================================
 const FALLBACK_SCHEDULE = {
     "18/4/2026": { C1: ["Nguyễn Ngọc Lâm"], C2: ["Nguyễn Minh Quang", "Đỗ Thành Công"] },
@@ -48,28 +49,59 @@ const FALLBACK_SCHEDULE = {
     "31/5/2026": { C1: ["Nguyễn Ngọc Lâm"], C2: ["Nguyễn Minh Quang", "Đỗ Thành Công"] },
 };
 
-// Dữ liệu đang hoạt động (sẽ được ghi đè bởi NAS, hoặc Sheets dự phòng, nếu tải thành công)
-let scheduleData = Object.assign({}, FALLBACK_SCHEDULE);
+// ============================================================
+//  LƯU LỊCH GẦN NHẤT VÀO MÁY (localStorage) — dùng khi mất mạng
+//  Mọi thao tác đọc/ghi đều bọc try/catch: localStorage lỗi hoặc trống
+//  thì web vẫn chạy bình thường.
+// ============================================================
+const SCHEDULE_CACHE_KEY = 'noiquy.lastSchedule';
+
+// Dữ liệu lịch trực đang hiển thị (chỉ bị ghi đè khi tải thành công)
+let scheduleData = FALLBACK_SCHEDULE;
+
+// Bản lưu gần nhất trong phiên đang chạy (dùng khi localStorage không ghi được)
+let inMemoryLastGood = null; // { data, source, at }
+
+function readScheduleCache() {
+    try {
+        const raw = localStorage.getItem(SCHEDULE_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        if (!parsed.data || typeof parsed.data !== 'object') return null;
+        if (Object.keys(parsed.data).length === 0) return null;
+        return parsed;
+    } catch (err) {
+        console.warn('[Cache] Không đọc được bản lưu trong máy:', (err && err.message) || err);
+        return null;
+    }
+}
+
+function writeScheduleCache(data, source) {
+    try {
+        localStorage.setItem(SCHEDULE_CACHE_KEY, JSON.stringify({
+            data: data,
+            source: source,
+            savedAt: Date.now(),
+        }));
+    } catch (err) {
+        console.warn('[Cache] Không ghi được bản lưu vào máy:', (err && err.message) || err);
+    }
+}
+
+// Lịch đang hiển thị: ưu tiên bản lưu trong máy, chưa có thì dùng dữ liệu dự phòng cũ.
+// (Bản lưu được ghi lại mỗi lần tải NAS/Sheets thành công.)
+(function initScheduleData() {
+    const cached = readScheduleCache();
+    scheduleData = (cached && cached.data) ? cached.data : FALLBACK_SCHEDULE;
+    if (cached) inMemoryLastGood = { data: cached.data, source: cached.source || 'cache', at: cached.savedAt || 0 };
+})();
+
 
 // ============================================================
-//  FALLBACK NỘI QUY — hiển thị khi chưa có sheet NoiQuy
+//  NỘI QUY — nay hardcode trong js/content.js (NOI_QUY_ROWS),
+//  KHÔNG tải từ Google Sheets nữa. Muốn sửa nội quy: sửa js/content.js.
 // ============================================================
-const FALLBACK_NOI_QUY = [
-    { panel: '1', tieu_de: '1. Quy định thời gian & bàn giao', noi_dung: 'Có mặt trước giờ giao nhận ca ít nhất [O]15 phút[/O] để nắm bắt tình hình hệ thống và các sự cố từ ca trước.' },
-    { panel: '1', tieu_de: '', noi_dung: '[W]Thủ tục bàn giao:[/W] Ghi chép đầy đủ vào sổ nhật ký (Tình trạng mạng IT/OT, sự cố đang xử lý, kế hoạch công tác).' },
-    { panel: '1', tieu_de: '', noi_dung: 'Tuân thủ lịch trực theo ca kíp dưới sự phân công của Quản lý phòng.' },
-    { panel: '1', tieu_de: '', noi_dung: 'Dọn dẹp vệ sinh nơi làm việc trước khi bàn giao ca.' },
-    { panel: '2', tieu_de: '2. Kỷ luật & tác phong làm việc', noi_dung: '[R]Không được tự ý rời bỏ vị trí trực[/R] khi chưa có người thay thế. (Bất khả kháng phải báo cáo ngay cho Quản lý phòng).' },
-    { panel: '2', tieu_de: '', noi_dung: 'Không được làm việc riêng trong ca trực.' },
-    { panel: '2', tieu_de: '', noi_dung: '[R]Nghiêm cấm[/R] uống rượu, bia hoặc tổ chức liên hoan tại nơi làm việc trong thời gian trực.' },
-    { panel: '2', tieu_de: '', noi_dung: '[W]Trật tự vệ sinh:[/W] Giữ gìn vệ sinh khu vực trực, sắp xếp đồ dùng cá nhân đúng nơi quy định.' },
-    { panel: '3', tieu_de: '3. Trách nhiệm chuyên môn', noi_dung: '[W]Giám sát:[/W] Hệ thống mạng truyền dẫn SCADA, tín hiệu các TBA và mạng Điều hành sản xuất.' },
-    { panel: '3', tieu_de: '', noi_dung: '[W]Xử lý sự cố:[/W] Báo cáo kịp thời cấp có thẩm quyền. Nguyên tắc: [O]Nhanh chóng, chính xác, đúng quy trình.[/O]' },
-    { panel: '3', tieu_de: '', noi_dung: 'Khách vào khu vực làm việc [R]phải có sự phê duyệt của Lãnh đạo[/R] và đảm bảo an toàn.' },
-    { panel: '3', tieu_de: '', noi_dung: 'Tất cả khách phải đăng ký thông tin vào [O]Sổ nhật ký ra vào[/O] phòng trực ĐHCS.' },
-    { panel: '4', tieu_de: '4. Trang thiết bị & an toàn', noi_dung: '[W]Bảo quản tài sản:[/W] Có trách nhiệm bảo quản vật tư, thiết bị điều hành và hồ sơ lưu trữ tại cơ sở.' },
-    { panel: '4', tieu_de: '', noi_dung: '[W]Phòng cháy chữa cháy:[/W] Tuân thủ [R]nghiêm ngặt[/R] các quy định về an toàn điện, phòng chống cháy nổ tại phòng điều khiển.' },
-];
 
 // ============================================================
 //  CSV PARSER — hỗ trợ trường có dấu phẩy bên trong ngoặc kép
@@ -207,19 +239,6 @@ function buildScheduleData(rows) {
 }
 
 // ============================================================
-//  BUILD CONFIG từ CSV rows (cặp key-value)
-// ============================================================
-function buildConfig(rows) {
-    const config = {};
-    rows.forEach(row => {
-        const k = (row['key'] || row['Key'] || '').trim();
-        const v = (row['value'] || row['Value'] || '').trim();
-        if (k) config[k] = v;
-    });
-    return config;
-}
-
-// ============================================================
 //  MARKUP PARSER: [R]...[/R] [O]...[/O] [W]...[/W]
 //  Bộ phân giải tẫ markup thành HTML span highlight
 // ============================================================
@@ -231,7 +250,7 @@ function parseMarkup(text) {
 }
 
 // ============================================================
-//  BUILD NOI QUY DATA từ CSV rows
+//  BUILD NOI QUY DATA từ rows (nay lấy từ js/content.js)
 // ============================================================
 function buildNoiQuyData(rows) {
     // Group by panel number
@@ -268,14 +287,9 @@ function renderPanels(rows) {
 }
 
 // ============================================================
-//  RENDER PANELS DỰNG DỮ LIỆU FALLBACK
-// ============================================================
-function renderFallbackPanels() {
-    renderPanels(FALLBACK_NOI_QUY);
-}
-
-// ============================================================
-//  ÁP DỤNG CONFIG vào DOM
+//  ÁP DỤNG CẤU HÌNH (ticker, note) — nay lấy từ js/content.js
+//  Ghi chú `note` giữ nguyên chỗ cũ (.schedule-note), KHÔNG trộn
+//  với nhãn nguồn dữ liệu ở góc dưới màn hình.
 // ============================================================
 function applyConfig(config) {
     if (config.ticker) {
@@ -289,29 +303,59 @@ function applyConfig(config) {
 }
 
 // ============================================================
-//  TRẠNG THÁI LOADING & STATUS
+//  NHÃN NGUỒN DỮ LIỆU (góc dưới phải, ngay trên footer)
+//    nas      : xanh  — "NAS · HH:mm"
+//    sheets   : vàng  — "Google Sheets (NAS lỗi) · HH:mm"
+//    cache    : cam   — "Bản lưu dd/MM HH:mm (mất mạng)"
+//    fallback : đỏ    — "Dữ liệu dự phòng cũ"
 // ============================================================
-function setLoadingState(isLoading) {
-    const listIds = ['list-c1', 'list-c2', 'list-t1', 'list-t2'];
-    if (isLoading) {
-        listIds.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.innerHTML = '<li class="loading-item"><span class="spinner"></span> Đang tải...</li>';
-        });
-    }
+function pad2(n) {
+    return String(n).padStart(2, '0');
 }
 
-function setStatusNote(state) {
-    const note = document.querySelector('.schedule-note');
-    if (!note) return;
-    const messages = {
-        nas:               '🟢 Đồng bộ từ NAS.',
-        live:              '🟢 Đồng bộ từ Google Sheets.',
-        'sheets-fallback': '🟡 NAS lỗi — dùng Google Sheets.',
-        local:             '🟡 Dùng dữ liệu nội bộ (chưa cấu hình Sheets).',
-        error:             '🔴 Lỗi kết nối Sheets — hiển thị dữ liệu nội bộ.',
-    };
-    note.textContent = messages[state] || '';
+function formatHM(date) {
+    return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+function formatDMHM(date) {
+    return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)} ${formatHM(date)}`;
+}
+
+const SOURCE_BADGE_CLASS = {
+    nas: 'is-nas',
+    sheets: 'is-sheets',
+    cache: 'is-cache',
+    fallback: 'is-fallback',
+};
+
+function sourceBadgeText(kind, at) {
+    const when = at instanceof Date ? at : new Date();
+    if (kind === 'nas') return `NAS · ${formatHM(when)}`;
+    if (kind === 'sheets') return `Google Sheets (NAS lỗi) · ${formatHM(when)}`;
+    if (kind === 'cache') return `Bản lưu ${formatDMHM(when)} (mất mạng)`;
+    return 'Dữ liệu dự phòng cũ';
+}
+
+function setSourceBadge(kind, at) {
+    const badge = document.getElementById('sourceBadge');
+    if (!badge) return;
+
+    const txt = badge.querySelector('.txt');
+    if (txt) txt.textContent = sourceBadgeText(kind, at);
+    badge.classList.remove(...Object.values(SOURCE_BADGE_CLASS));
+    if (SOURCE_BADGE_CLASS[kind]) badge.classList.add(SOURCE_BADGE_CLASS[kind]);
+    badge.title = 'Nguồn dữ liệu lịch trực';
+    badge.hidden = false;
+
+    positionSourceBadge();
+}
+
+// Đặt nhãn ngay trên footer, sát mép phải (footer chiếm cả đáy màn hình)
+function positionSourceBadge() {
+    const badge = document.getElementById('sourceBadge');
+    const footer = document.querySelector('.footer');
+    if (!badge || !footer) return;
+    badge.style.bottom = `${footer.offsetHeight + 8}px`;
 }
 
 // ============================================================
@@ -358,20 +402,18 @@ async function fetchNASLichTruc() {
 }
 
 // ============================================================
-//  LOAD LỊCH TRỰC + DỮ LIỆU PHỤ
-//  1) Lịch trực: NAS → Google Sheets LichTrucMoi → FALLBACK_SCHEDULE
-//  2) CauHinh / NoiQuy: luôn lấy từ Sheets, không chặn bước lịch trực
+//  LOAD LỊCH TRỰC (chỉ lịch trực — nội quy/cấu hình đã hardcode trong js/content.js)
+//  Thứ tự: NAS -> Google Sheets LichTrucMoi -> bản lưu trong máy -> FALLBACK_SCHEDULE
+//  Một lần tải lỗi KHÔNG được xoá lịch đang hiển thị.
 // ============================================================
-async function loadFromSheets() {
+async function loadScheduleData() {
     const id = SHEETS_CONFIG.SHEET_ID;
     const hasSheetsId = Boolean(id) && id !== 'YOUR_SHEET_ID_HERE';
     if (!hasSheetsId) {
         console.warn('[Sheets] Chưa cấu hình SHEET_ID trong js/config.js — chỉ dùng NAS (nếu bật).');
     }
 
-    setLoadingState(true);
-
-    let scheduleSource = null; // 'nas' | 'sheets' | null
+    let loaded = null; // { data, source } — chỉ khác null khi tải THÀNH CÔNG
 
     // (a) NAS là nguồn chính
     if (typeof NAS_CONFIG !== 'undefined' && NAS_CONFIG.ENABLED) {
@@ -386,9 +428,8 @@ async function loadFromSheets() {
             if (effectiveDate.getHours() < 6) effectiveDate.setDate(effectiveDate.getDate() - 1);
             const todayKey = `${effectiveDate.getDate()}/${effectiveDate.getMonth() + 1}/${effectiveDate.getFullYear()}`;
             if (!nasData[todayKey]) throw new Error(`thiếu lịch ngày ${todayKey}`);
-            scheduleData = nasData;
-            scheduleSource = 'nas';
-            console.log(`[NAS] Đã tải ${Object.keys(scheduleData).length} ngày trực từ NAS.`);
+            loaded = { data: nasData, source: 'nas' };
+            console.log(`[NAS] Đã tải ${Object.keys(nasData).length} ngày trực từ NAS.`);
         } catch (err) {
             console.warn('[NAS] Không tải được lịch trực từ NAS:', (err && err.message) || err);
         }
@@ -397,14 +438,14 @@ async function loadFromSheets() {
     }
 
     // (b) Sheets dự phòng khi NAS tắt/lỗi/rỗng
-    if (!scheduleSource && hasSheetsId) {
+    if (!loaded && hasSheetsId) {
         try {
             const scheduleCSV = await fetchCSV(SHEETS_CONFIG.URL_LICH_TRUC);
             const rows = parseCSV(scheduleCSV);
             if (rows.length > 0) {
-                scheduleData = buildScheduleData(rows);
-                scheduleSource = 'sheets';
-                console.log(`[Sheets] Đã tải ${Object.keys(scheduleData).length} ngày trực từ Sheets (dự phòng).`);
+                const sheetsData = buildScheduleData(rows);
+                loaded = { data: sheetsData, source: 'sheets' };
+                console.log(`[Sheets] Đã tải ${Object.keys(sheetsData).length} ngày trực từ Sheets (dự phòng).`);
             } else {
                 console.warn('[Sheets] Sheet LichTrucMoi rỗng.');
             }
@@ -413,44 +454,32 @@ async function loadFromSheets() {
         }
     }
 
-    // (c) Cả hai lỗi → giữ FALLBACK_SCHEDULE đang có
-    if (scheduleSource === 'nas') {
-        setStatusNote('nas');
-    } else if (scheduleSource === 'sheets') {
-        setStatusNote('sheets-fallback');
+    if (loaded) {
+        // Tải thành công → lưu bản lưu vào máy rồi mới hiển thị
+        scheduleData = loaded.data;
+        inMemoryLastGood = { data: loaded.data, source: loaded.source, at: Date.now() };
+        writeScheduleCache(loaded.data, loaded.source);
+        setSourceBadge(loaded.source, new Date());
     } else {
-        setStatusNote(hasSheetsId ? 'error' : 'local');
+        // (c) Cả NAS lẫn Sheets đều lỗi → dùng bản lưu trong máy (nhãn màu cam)
+        const cached = readScheduleCache();
+        if (cached) {
+            scheduleData = cached.data;
+            setSourceBadge('cache', new Date(cached.savedAt || Date.now()));
+            console.log('[Cache] Mất mạng — dùng bản lưu lịch trực trong máy.');
+        } else if (inMemoryLastGood) {
+            // localStorage hỏng nhưng phiên này đã từng tải được → giữ nguyên lịch đang hiển thị
+            scheduleData = inMemoryLastGood.data;
+            setSourceBadge('cache', new Date(inMemoryLastGood.at || Date.now()));
+            console.log('[Cache] Không đọc được bản lưu — giữ lịch đã tải trong phiên này.');
+        } else {
+            // (d) Chưa từng tải được lần nào → giữ FALLBACK_SCHEDULE (nhãn màu đỏ)
+            setSourceBadge('fallback');
+            console.log('[Fallback] Chưa có bản lưu nào — dùng dữ liệu dự phòng cũ.');
+        }
     }
 
     updateScheduleDisplay(new Date(), true);
-
-    // Tải các sheet phụ sau, lỗi sheet phụ không được chặn lịch trực.
-    if (hasSheetsId) {
-        Promise.allSettled([
-            fetchCSV(SHEETS_CONFIG.URL_CAU_HINH),
-            fetchCSV(SHEETS_CONFIG.URL_NOI_QUY),
-        ]).then(([configCSV, noiQuyCSV]) => {
-            if (configCSV.status === 'fulfilled') {
-                const configRows = parseCSV(configCSV.value);
-                const config = buildConfig(configRows);
-                applyConfig(config);
-            }
-
-            if (noiQuyCSV.status === 'fulfilled') {
-                const noiQuyRows = parseCSV(noiQuyCSV.value);
-                if (noiQuyRows.length > 0) {
-                    renderPanels(noiQuyRows);
-                } else {
-                    renderFallbackPanels();
-                }
-            } else {
-                console.warn('[Sheets] Không tải được NoiQuy, dùng fallback.');
-                renderFallbackPanels();
-            }
-        });
-    } else {
-        renderFallbackPanels();
-    }
 }
 
 // ============================================================
@@ -613,19 +642,54 @@ function initKioskMode() {
 }
 
 // ============================================================
+//  TẢI LẠI CẢ TRANG MỖI NGÀY LÚC 04:00 (để TV nhận code mới khi deploy)
+// ============================================================
+function msUntilDailyReload(now) {
+    const hour = (typeof DAILY_RELOAD_HOUR === 'number') ? DAILY_RELOAD_HOUR : 4;
+    const next = new Date(now);
+    next.setHours(hour, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next - now;
+}
+
+function scheduleDailyReload() {
+    const delay = msUntilDailyReload(new Date());
+    console.log(`[Reload] Tải lại cả trang sau ${Math.round(delay / 60000)} phút (04:00).`);
+    setTimeout(() => { location.reload(); }, delay);
+}
+
+// ============================================================
 //  ENTRY POINT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+    // NỘI QUY + CẤU HÌNH: hardcode trong js/content.js → hiện ngay, không chờ mạng
+    if (typeof NOI_QUY_ROWS !== 'undefined') {
+        renderPanels(NOI_QUY_ROWS);
+    } else {
+        console.error('[Nội quy] Không thấy js/content.js — kiểm tra thẻ <script> trong index.html.');
+    }
+    if (typeof APP_CONFIG !== 'undefined') applyConfig(APP_CONFIG);
+
     // Khởi động đồng hồ: chỉ cập nhật mỗi phút để giảm reflow trên TV yếu
     updateClock();
     setInterval(updateClock, 60 * 1000);
 
-    // Load dữ liệu: lịch trực từ NAS (Sheets dự phòng) + CauHinh/NoiQuy từ Sheets
-    loadFromSheets();
+    // Vẽ lịch ngay từ bản lưu trong máy (hoặc dữ liệu dự phòng) rồi mới tải mạng
+    updateScheduleDisplay(new Date(), true);
+
+    // Load lịch trực: NAS (Sheets dự phòng) → bản lưu trong máy → fallback
+    loadScheduleData();
 
     // Khởi tạo tính năng Kiosk Mode (Toàn màn hình)
     initKioskMode();
 
-    // Reload trang mỗi 30 phút để lấy dữ liệu mới nhất từ NAS/Sheets
-    setTimeout(() => { location.reload(); }, 30 * 60 * 1000);
+    // Nhãn nguồn nằm ngay trên footer
+    positionSourceBadge();
+    window.addEventListener('resize', positionSourceBadge);
+
+    // Tải lại dữ liệu NGẦM mỗi 5 phút — không tải lại trang, chỉ vẽ lại phần lịch
+    setInterval(loadScheduleData, (typeof REFRESH_MS === 'number') ? REFRESH_MS : 5 * 60 * 1000);
+
+    // Tải lại cả trang 1 lần mỗi ngày lúc 04:00 sáng
+    scheduleDailyReload();
 });
