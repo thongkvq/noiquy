@@ -250,6 +250,31 @@ body.kiosk-active .kiosk-btn:hover {
 
 .shift-card.active .shift-badge {
     display: block;
+    z-index: 1;
+}
+
+/* Khung đang trực nhấp nháy nhẹ: chỉ đổi opacity của lớp viền phủ
+   (chạy trên GPU, không vẽ lại box-shadow → nhẹ cho TV box) */
+.shift-card.active::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border: 3px solid var(--evn-orange);
+    border-radius: 18px;
+    background: rgba(243, 112, 33, 0.12);
+    pointer-events: none;
+    opacity: 0;
+    will-change: opacity;
+    animation: duty-pulse 2s ease-in-out infinite;
+}
+
+@keyframes duty-pulse {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shift-card.active::after { animation: none; }
 }
 
 .shift-title {
