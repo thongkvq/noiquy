@@ -93,45 +93,9 @@ body {
     gap: 25px;
 }
 
-.kiosk-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #8aa4c4;
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    outline: none;
-    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.kiosk-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: var(--evn-orange);
-    border-color: rgba(243, 112, 33, 0.5);
-    transform: scale(1.05);
-}
-
-.kiosk-btn svg {
-    width: 22px;
-    height: 22px;
-}
-
 /* Ẩn con trỏ chuột khi kiosk mode active */
 body.kiosk-active {
     cursor: none !important;
-}
-
-body.kiosk-active .kiosk-btn {
-    opacity: 0.1;
-    /* Làm mờ nút đi để tránh phân tâm */
-}
-
-body.kiosk-active .kiosk-btn:hover {
-    opacity: 1;
 }
 
 /* Main Layout Wrapper */

@@ -584,38 +584,9 @@ function updateClock() {
 }
 
 // ============================================================
-//  KIOSK MODE (FULLSCREEN & IDLE CURSOR)
+//  KIOSK MODE (IDLE CURSOR)
 // ============================================================
 function initKioskMode() {
-    const btn = document.getElementById('fullscreen-btn');
-    if (!btn) return;
-
-    // Toggle Fullscreen
-    btn.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.error(`Error attempting to enable fullscreen: ${err.message}`);
-            });
-        } else {
-            document.exitFullscreen();
-        }
-    });
-
-    // Cập nhật icon nút dựa trên trạng thái fullscreen
-    document.addEventListener('fullscreenchange', () => {
-        if (document.fullscreenElement) {
-            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path>
-            </svg>`;
-            btn.setAttribute('title', 'Thoát toàn màn hình');
-        } else {
-            btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
-            </svg>`;
-            btn.setAttribute('title', 'Chế độ TV (Toàn màn hình)');
-        }
-    });
-
     // Ẩn con trỏ chuột khi không có tương tác
     if (!('ontouchstart' in window)) {
         let idleTimeout;
@@ -685,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof Tabs !== 'undefined') Tabs.init();         // dải tab + vòng xoay 4 màn
     if (typeof Weather !== 'undefined') Weather.init();   // thời tiết trên header
 
-    // Khởi tạo tính năng Kiosk Mode (Toàn màn hình)
+    // Khởi tạo tính năng Kiosk Mode (ẩn con trỏ khi không dùng chuột)
     initKioskMode();
 
     // Nhãn nguồn nằm ngay trên footer

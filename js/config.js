@@ -151,7 +151,7 @@ const ROTATION = {
     ENABLED: true,
     FADE_MS: 400,          // chuyển màn bằng opacity
     NOI_QUY_MS: 60000,     // 60s
-    CONG_TAC_MS: 30000,    // 30s
+    CONG_TAC_MS: 20000,    // 20s
     LICH_TRUC_MS: 20000,   // 20s — chỉ dùng khi mở tay màn Lịch trực tháng
     SU_CO_MS: 30000,       // 30s
     MIN_PAGE_MS: 10000,    // 10s/trang
