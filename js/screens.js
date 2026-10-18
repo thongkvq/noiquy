@@ -464,7 +464,8 @@ const Screens = (function () {
 
         matrix.people.forEach((name, i) => {
             const row = i + 2;
-            html += '<div class="tm-name" title="' + esc(name) + '"' + at(1, row) + '>' + esc(name) + '</div>';
+            const shortName = (NAS_CONFIG.TEN_VIET_TAT || {})[name] || name;
+            html += '<div class="tm-name" title="' + esc(name) + '"' + at(1, row) + '>' + esc(shortName) + '</div>';
             for (let d = 1; d <= daysInMonth; d++) {
                 const cell = matrix.byPerson[i][d];
                 const cls = ['tm-cell'];

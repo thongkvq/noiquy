@@ -62,6 +62,16 @@ const NAS_CONFIG = {
         'CôngĐT': 'Đỗ Thành Công',
         'Thông KVQ': 'Khương Vũ Quang Thông',
     },
+    // Tên viết tắt hiện ở cột nhân sự của bảng "Lịch trực tháng" (cho ô ngày rộng hơn).
+    TEN_VIET_TAT: {
+        'Tống Minh Đức': 'DucTM',
+        'Lê Trường Giang': 'GiangLT',
+        'Nguyễn Ngọc Lâm': 'LamNN',
+        'Nguyễn Minh Quang': 'QuangNM',
+        'Nguyễn Hoàng Tiến Lâm': 'LamNHT',
+        'Đỗ Thành Công': 'CongDT',
+        'Khương Vũ Quang Thông': 'ThongKVQ',
+    },
 };
 const SHEETS_CONFIG = {
     // ⚠️ ĐÃY LÀ SHEET ID THỰC TỜ
