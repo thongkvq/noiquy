@@ -540,6 +540,26 @@ const Screens = (function () {
             itemHTML: function (row, i, ctx) { return congTacRow(row, ctx.now); },
         },
         {
+            id: 'suco',
+            label: 'SỰ CỐ CÒN TỒN',
+            duration: ROTATION.SU_CO_MS,
+            // Thẻ sự cố cao 116px + 2px margin (chữ trong thẻ đã +2px)
+            rowHeight: 118,
+            headHeight: 48,
+            noteHeight: 30,
+            minRows: 2,
+            emptyText: 'Không có sự cố còn tồn ✓',
+            sig: function () { return state.suco.sig || state.suco.status; },
+            get: function () {
+                const st = state.suco;
+                if (st.status !== 'ok') return { status: st.status, message: MSG[st.status] };
+                if (!st.rows.length) return { status: 'empty' };
+                return { status: 'ok', items: st.rows };
+            },
+            headHTML: suCoHead,
+            itemHTML: function (row, i, ctx) { return suCoCard(row, ctx.now); },
+        },
+        {
             id: 'thang',
             label: 'LỊCH TRỰC THÁNG',
             duration: ROTATION.LICH_TRUC_MS,
@@ -561,26 +581,6 @@ const Screens = (function () {
                 }
                 return { status: 'ok', html: monthPageHTML(now, matrix, !usingNas) };
             },
-        },
-        {
-            id: 'suco',
-            label: 'SỰ CỐ CÒN TỒN',
-            duration: ROTATION.SU_CO_MS,
-            // Thẻ sự cố cao 116px + 2px margin (chữ trong thẻ đã +2px)
-            rowHeight: 118,
-            headHeight: 48,
-            noteHeight: 30,
-            minRows: 2,
-            emptyText: 'Không có sự cố còn tồn ✓',
-            sig: function () { return state.suco.sig || state.suco.status; },
-            get: function () {
-                const st = state.suco;
-                if (st.status !== 'ok') return { status: st.status, message: MSG[st.status] };
-                if (!st.rows.length) return { status: 'empty' };
-                return { status: 'ok', items: st.rows };
-            },
-            headHTML: suCoHead,
-            itemHTML: function (row, i, ctx) { return suCoCard(row, ctx.now); },
         },
     ];
 
