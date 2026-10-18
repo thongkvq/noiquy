@@ -115,8 +115,8 @@ const API_CONFIG = {
     READ_KEY_STORAGE: 'noiquy.readKey',
     READ_KEY_HEADER: 'X-Read-Key',
     TIMEOUT_MS: 8000,
-    // Số ngày tới lấy cho màn "Lịch công tác các đơn vị" (hôm nay .. +6)
-    CONG_TAC_DAYS: 7,
+    // Số ngày lấy cho màn "Lịch công tác các đơn vị": 1 = chỉ hôm nay
+    CONG_TAC_DAYS: 1,
 };
 
 // ============================================================

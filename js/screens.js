@@ -522,7 +522,7 @@ const Screens = (function () {
             headHeight: 44,
             noteHeight: 30,
             minRows: 3,
-            emptyText: 'Không có lịch công tác trong 7 ngày tới',
+            emptyText: 'Hôm nay không có lịch công tác',
             sig: function () { return state.congtac.sig || state.congtac.status; },
             get: function () {
                 const st = state.congtac;
