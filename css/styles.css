@@ -1048,8 +1048,19 @@ body.kiosk-active .kiosk-btn:hover {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 1.225rem;
-    font-weight: 600;
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+/* Dòng địa bàn · đơn vị · bắt đầu: giá trị to, đậm */
+.sc-line.sc-info {
+    font-size: 1.25rem;
+}
+
+.sc-info b {
+    font-weight: 700;
     color: #ffffff;
 }
 
@@ -1093,7 +1104,7 @@ body.kiosk-active .kiosk-btn:hover {
 
 .sc-ton {
     color: var(--evn-orange);
-    font-weight: 600;
+    font-weight: 700;
 }
 
 /* ============================================================

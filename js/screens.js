@@ -282,27 +282,33 @@ const Screens = (function () {
         const start = parseIso(row.tg_bat_dau_iso) || parseVN(row.tg_bat_dau);
         const ton = start ? 'đã tồn ' + durText(now - start) : '';
         const dichVu = String(row.dich_vu || '').trim().toUpperCase();
-        const meta = [];
-        if (!isBlank(row.pham_vi)) meta.push('<span class="sc-k">Phạm vi</span> ' + esc(row.pham_vi));
-        if (!isBlank(row.dia_ban)) meta.push('<span class="sc-k">Địa bàn</span> ' + esc(row.dia_ban));
-        if (!isBlank(row.don_vi)) meta.push('<span class="sc-k">Đơn vị</span> ' + esc(row.don_vi));
-        if (!isBlank(row.sl_tba)) meta.push('<span class="sc-k">TBA</span> ' + esc(row.sl_tba));
-        if (!isBlank(row.mat_dich_vu)) meta.push('<span class="sc-k">Mất DV</span> ' + esc(row.mat_dich_vu));
-
-        const nn = isBlank(row.nguyen_nhan) ? '' : '<span class="sc-k">NN</span> ' + esc(row.nguyen_nhan);
-        const xl = isBlank(row.cach_xu_ly) ? '' : '<span class="sc-k">XL</span> ' + esc(row.cach_xu_ly);
+        // Dòng 1: phạm vi ảnh hưởng (quan trọng nhất). Không có phạm vi thì lấy tên sự cố.
+        const phamVi = isBlank(row.pham_vi) ? row.su_co : row.pham_vi;
+        // Dòng 2: địa bàn · đơn vị · thời gian bắt đầu / đã tồn.
+        const key = (k, v) => '<span class="sc-kv"><span class="sc-k">' + k + '</span> <b>' + v + '</b></span>';
+        const info = [
+            key('Địa bàn', orDash(row.dia_ban)),
+            key('Đơn vị', orDash(row.don_vi)),
+            key('Bắt đầu', start ? fmtHM(start) + ' ' + fmtDMY(start) : orDash(row.tg_bat_dau))
+                + (ton ? ' <span class="sc-ton">' + ton + '</span>' : ''),
+        ];
+        // Dòng 3 (mờ): sự cố, nguyên nhân, xử lý, TBA, mất DV.
+        const extra = [];
+        if (!isBlank(row.pham_vi) && !isBlank(row.su_co)) extra.push('<span class="sc-k">Sự cố</span> ' + esc(row.su_co));
+        if (!isBlank(row.nguyen_nhan)) extra.push('<span class="sc-k">NN</span> ' + esc(row.nguyen_nhan));
+        if (!isBlank(row.cach_xu_ly)) extra.push('<span class="sc-k">XL</span> ' + esc(row.cach_xu_ly));
+        if (!isBlank(row.sl_tba) && String(row.sl_tba).trim() !== '0') extra.push('<span class="sc-k">TBA</span> ' + esc(row.sl_tba));
+        if (!isBlank(row.mat_dich_vu)) extra.push('<span class="sc-k">Mất DV</span> ' + esc(row.mat_dich_vu));
+        const sep = ' <span class="sc-sep">·</span> ';
 
         return '<div class="sc-card sc-' + cls + '">'
             + '<div class="sc-top">'
             + '<span class="sc-badge">' + esc(muc.toUpperCase()) + '</span>'
-            + '<span class="sc-name" title="' + esc(row.su_co) + '">' + orDash(row.su_co) + '</span>'
+            + '<span class="sc-name" title="' + esc(phamVi) + '">' + orDash(phamVi) + '</span>'
             + (dichVu ? '<span class="sc-svc">' + esc(dichVu) + '</span>' : '')
             + '</div>'
-            + '<div class="sc-line">' + (meta.length ? meta.join(' <span class="sc-sep">·</span> ') : '—') + '</div>'
-            + '<div class="sc-line"><span class="sc-k">Bắt đầu</span> '
-            + (start ? fmtHM(start) + ' ' + fmtDMY(start) : orDash(row.tg_bat_dau))
-            + (ton ? ' <span class="sc-ton">' + ton + '</span>' : '') + '</div>'
-            + '<div class="sc-line sc-dim">' + (nn || xl ? (nn + (nn && xl ? ' <span class="sc-sep">·</span> ' : '') + xl) : '—') + '</div>'
+            + '<div class="sc-line sc-info">' + info.join(sep) + '</div>'
+            + '<div class="sc-line sc-dim">' + (extra.length ? extra.join(sep) : '—') + '</div>'
             + '</div>';
     }
 
