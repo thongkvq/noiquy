@@ -242,13 +242,15 @@ const Screens = (function () {
         const start = parseIso(row.bat_dau_iso) || parseVN(row.bat_dau);
         const end = parseIso(row.ket_thuc_iso) || parseVN(row.ket_thuc);
         const ongoing = Boolean(start && end && now >= start && now <= end);
+        const ended = Boolean(end && now > end);
         const today = Boolean(start && sameDay(start, now));
-        const cls = ongoing ? ' is-now' : (today ? ' is-today' : '');
+        const cls = ongoing ? ' is-now' : (ended ? ' is-done' : (today ? ' is-today' : ''));
         const chip = ongoing
-            ? '<span class="ct-chip is-now">ĐANG DIỄN RA</span>'
-            : (today ? '<span class="ct-chip is-today">HÔM NAY</span>' : '');
+            ? '<span class="ct-chip is-now">ĐANG CÔNG TÁC</span>'
+            : (ended ? '<span class="ct-chip is-done">ĐÃ KẾT THÚC</span>'
+                : (start ? '<span class="ct-chip is-wait">CHƯA BẮT ĐẦU</span>' : ''));
         // Cột chính là "Vị trí / phạm vi ảnh hưởng": rộng nhất, chữ lớn hơn,
-        // hiện đủ chữ (xuống tối đa 2 dòng rồi mới cắt "…" — xem .ct-row > .ct-zone).
+        // xuống tối đa 3 dòng rồi mới cắt "…" — xem .ct-row > .ct-zone.
         return '<div class="ct-row' + cls + '">'
             + '<div class="ct-flag">' + chip + '</div>'
             + '<div class="ct-time">' + esc(rangeText(start, end, row.bat_dau, row.ket_thuc)) + '</div>'
@@ -515,7 +517,7 @@ const Screens = (function () {
             id: 'congtac',
             label: 'LỊCH CÔNG TÁC',
             duration: ROTATION.CONG_TAC_MS,
-            rowHeight: 68,
+            rowHeight: 92,
             headHeight: 44,
             noteHeight: 30,
             minRows: 3,

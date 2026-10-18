@@ -822,10 +822,10 @@ body.kiosk-active .kiosk-btn:hover {
 .ct-row {
     display: grid;
     /* Trạng thái · Thời gian · Vị trí/Phạm vi ảnh hưởng (rộng nhất) · Đơn vị · Số CV */
-    grid-template-columns: 132px 250px minmax(0, 1fr) 210px 74px;
+    grid-template-columns: 150px 236px minmax(0, 1fr) 150px 170px;
     align-items: center;
     gap: 14px;
-    height: 64px;
+    height: 88px;
     padding: 0 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
     font-size: 1.02rem;
@@ -874,10 +874,22 @@ body.kiosk-active .kiosk-btn:hover {
     color: #b0d0ff;
 }
 
-/* Cột chính: chữ lớn hơn một chút, xuống tối đa 2 dòng rồi mới cắt "…" */
-.ct-row > .ct-zone {
+/* Đơn vị, Số CV: được xuống 2 dòng thay vì cắt "…" sớm */
+.ct-row > .ct-unit,
+.ct-row > .ct-cv {
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+}
+
+/* Cột chính: chữ lớn hơn một chút, xuống tối đa 3 dòng rồi mới cắt "…".
+   Dòng cao 88px (screens.js rowHeight = 92) để đủ 3 dòng. */
+.ct-row > .ct-zone {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     white-space: normal;
     overflow: hidden;
@@ -889,8 +901,8 @@ body.kiosk-active .kiosk-btn:hover {
 
 .ct-cv {
     text-align: right;
-    color: rgba(176, 208, 255, 0.62);
-    font-size: 0.85rem;
+    color: rgba(176, 208, 255, 0.75);
+    font-size: 0.9rem;
 }
 
 .ct-head > div:last-child {
@@ -902,7 +914,7 @@ body.kiosk-active .kiosk-btn:hover {
     font-family: 'Jura', sans-serif;
     font-size: 0.78rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     padding: 3px 9px;
     border-radius: 999px;
     white-space: nowrap;
@@ -913,10 +925,20 @@ body.kiosk-active .kiosk-btn:hover {
     color: #05121f;
 }
 
-.ct-chip.is-today {
-    background: rgba(243, 112, 33, 0.2);
-    border: 1px solid rgba(243, 112, 33, 0.6);
-    color: var(--evn-orange);
+.ct-chip.is-wait {
+    background: rgba(96, 165, 250, 0.14);
+    border: 1px solid rgba(96, 165, 250, 0.55);
+    color: #93c5fd;
+}
+
+.ct-chip.is-done {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #8aa4c4;
+}
+
+.ct-row.is-done > div {
+    opacity: 0.6;
 }
 
 /* ============================================================
